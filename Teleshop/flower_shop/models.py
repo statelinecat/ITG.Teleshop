@@ -1,10 +1,25 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.utils.text import slugify
 
 class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес")
+
+    # Указываем уникальные related_name для groups и user_permissions
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name='Группы',
+        blank=True,
+        related_name='flower_shop_users',  # Уникальный related_name
+        related_query_name='flower_shop_user',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name='Права доступа',
+        blank=True,
+        related_name='flower_shop_users',  # Уникальный related_name
+        related_query_name='flower_shop_user',
+    )
 
     class Meta:
         verbose_name = "Пользователь"
@@ -43,6 +58,21 @@ class Product(models.Model):
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
 
+class Cart(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Корзина пользователя {self.user.username}"
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name}"
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('accepted', 'Принят к работе'),
@@ -80,6 +110,7 @@ class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
     text = models.TextField(verbose_name="Текст отзыва")
     rating = models.PositiveIntegerField(default=5, verbose_name="Рейтинг")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     def __str__(self):
         return f"Отзыв от {self.user.username} на {self.product.name}"

@@ -1,0 +1,54 @@
+{% extends 'flowershop/base.html' %}
+{% load form_tags %}
+
+{% block title %}
+    <title>Лепесток - корзина</title>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Корзина</h1>
+    <div class="card">
+        <div class="card-body">
+            {% if cart and cart.items.all %}
+                <ul class="list-group mb-3">
+                    {% for item in cart.items.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ item.flower.image.url }}" alt="{{ item.flower.name }}" class="img-thumbnail" style="width: 50px; height: 50px; margin-right: 10px;">
+                                <div>
+                                    <span>{{ item.flower.name }}</span><br>
+                                    <span>Цена: {{ item.flower.price }} руб.</span><br>
+                                    <span>Количество: {{ item.quantity }}</span><br>
+                                    <span>Общая стоимость: {{ item.quantity|mul:item.flower.price|floatformat:2 }} руб.</span>
+                                </div>
+                            </div>
+                            <form method="post" action="{% url 'update_cart_item' item.id %}" class="d-inline-block">
+                                {% csrf_token %}
+                                <input type="number" name="quantity" value="{{ item.quantity }}" min="0" class="form-control d-inline-block w-auto" />
+                                <button type="submit" class="btn btn-primary btn-sm">Изменить</button>
+                            </form>
+                            <form method="post" action="{% url 'remove_cart_item' item.id %}" class="d-inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <h5 class="card-title">Сумма заказа: {{ cart.get_total_price }} руб.</h5>
+
+                {% if is_working_time %}
+                    <a href="{% url 'checkout' %}" class="btn btn-success">Оформить заказ</a>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        Заказы принимаются только в рабочие дни (с понедельника по пятницу) с 9:00 до 18:00.
+                    </div>
+                    <button class="btn btn-success" disabled>Оформить заказ</button>
+                {% endif %}
+            {% else %}
+                <p>Ваша корзина пуста.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

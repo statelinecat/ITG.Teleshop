@@ -1,0 +1,59 @@
+{% extends 'flowershop/base.html' %}
+
+
+{% block title %}
+    <title>Лепесток - регистрация</title>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Регистрация пользователя</h2>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                {{ form.non_field_errors }}
+                <div class="form-group">
+                    <label for="name">Имя</label>
+                    {{ form.name.errors }}
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Введите ваше имя" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    {{ form.email.errors }}
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Введите ваш email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Телефон</label>
+                     {{ form.phone.errors }}
+                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Введите ваш телефон" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Адрес</label>
+                    {{ form.address.errors }}
+                    <textarea class="form-control" id="address" name="address" rows="3" placeholder="Введите ваш адрес" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    {{ form.password.errors }}
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Введите ваш пароль" required>
+                </div>
+                <div class="form-group">
+                    <label for="password_repeat">Повторите пароль</label>
+                    {{ form.password_repeat.errors }}
+                    <input type="password" class="form-control" id="password_repeat" name="password_repeat" placeholder="Повторите ваш пароль" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+
+
+

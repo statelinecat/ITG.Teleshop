@@ -56,8 +56,8 @@ ROOT_URLCONF = 'Teleshop.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'DIRS': [BASE_DIR / 'templates'],  # Указываем путь к общей папке шаблонов
+        'APP_DIRS': True,  # Разрешаем поиск шаблонов в папках приложений
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',

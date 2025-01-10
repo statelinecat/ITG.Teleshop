@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    {% block title %}
+    {% endblock %}
+</head>
+<body>
+
+<!-- Шапка -->
+<header class="bg-light py-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="logo" align="center">
+                <img src="{% static 'img/logo.jpg' %}" alt="Цветы с доставкой" class="img-fluid rounded mb-2" width="220">
+                <h6>Лепесток доставка цветов</h6>
+            </div>
+            <nav class="nav">
+                <a class="nav-link" href="{% url 'catalog' %}">Каталог</a>
+                <a class="nav-link" href="#">Отзывы</a>
+                <a class="nav-link" href="{% url 'cart_detail' %}">Корзина</a>
+                <a class="nav-link" href="#">Избранное</a>
+                <a class="nav-link" href="#">Поиск</a>
+                {% if user.is_authenticated %}
+                    <a class="nav-link" href="{% url 'order_list' %}" class="btn btn-primary">Мои заказы</a>
+                    <form action="{% url 'user_logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="nav-link btn btn-link" style="padding: 0; border: none; background: none;">Выход</button>
+                    </form>
+                {% else %}
+                    <a class="nav-link" href="{% url 'user_login' %}">Войти</a>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+</header>
+
+{% block content %}
+{% endblock %}
+
+<!-- Футер -->
+<footer class="bg-light py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <h5>Контакты</h5>
+                <p>Email: example@example.com</p>
+                <p>Телефон: +7 123 456 7890</p>
+            </div>
+            <div class="col-md-4">
+                <h5>Меню</h5>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="#">О нас</a>
+                    <a class="nav-link" href="{% url 'catalog' %}">Каталог</a>
+                    <a class="nav-link" href="#">Отзывы</a>
+                    <a class="nav-link" href="#">Личный кабинет</a>
+                    <a class="nav-link" href="#">Корзина</a>
+                </nav>
+            </div>
+            <div class="col-md-4">
+                <h5>© 2023 Интернет-каталог цветов</h5>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

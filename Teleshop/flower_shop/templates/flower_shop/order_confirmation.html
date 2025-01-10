@@ -1,0 +1,23 @@
+{% extends 'flowershop/base.html' %}
+
+{% block title %}
+    <title>Лепесток - Подтверждение заказа</title>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Ваш заказ подтвержден!</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5>Ваш заказ №{{ order.id }} успешно оформлен.</h5>
+            <p>Сумма заказа: {{ order.total_price }} руб.</p>
+            <p>Дата оформления: {{ order.created_at }}</p>
+            <p>Имя: {{ order.name }}</p>
+            <p>Телефон: {{ order.phone }}</p>
+            <p>Адрес доставки: {{ order.address }}</p>
+            <p>Время доставки: {{ order.delivery_time }}</p>
+            <p>Комментарий: {{ order.comment }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

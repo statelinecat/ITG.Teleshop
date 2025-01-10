@@ -1,0 +1,63 @@
+{% extends 'flowershop/base.html' %}
+
+{% block title %}
+    <title>Лепесток - Оформление заказа</title>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="container mt-5">
+    <h1 class="mb-4">Оформление заказа</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5>Сумма заказа: {{ cart.get_total_price }} руб.</h5>
+            <form method="post" action="{% url 'checkout' %}">
+                {% csrf_token %}
+
+                <!-- Поле для имени -->
+                <div class="form-group mb-3">
+                    <label for="name">Имя:</label>
+                    <input type="text" id="name" name="name" class="form-control" value="{{ default_name }}" required>
+                </div>
+
+                <!-- Поле для номера телефона -->
+                <div class="form-group mb-3">
+                    <label for="phone">Номер телефона:</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" value="{{ default_phone }}" required>
+                </div>
+
+                <!-- Поле для адреса доставки -->
+                <div class="form-group mb-3">
+                    <label for="address">Адрес доставки:</label>
+                    <input type="text" id="address" name="address" class="form-control" value="{{ default_address }}" required>
+                </div>
+
+                <!-- Поле для времени доставки -->
+                <div class="form-group mb-3">
+                    <label for="delivery_time">Время доставки:</label>
+                    <input type="datetime-local" id="delivery_time" name="delivery_time" class="form-control" value="{{ default_delivery_time }}" required>
+                </div>
+
+                <!-- Поле для комментария -->
+                <div class="form-group mb-3">
+                    <label for="comment">Комментарий:</label>
+                    <textarea id="comment" name="comment" class="form-control" rows="3"></textarea>
+                </div>
+
+                <!-- Кнопка подтверждения заказа -->
+                <button type="submit" class="btn btn-success">Подтвердить заказ</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'flowershop/base.html' %}
+
+{% block title %}
+    <title>Лепесток - {{ category.name }}</title>
+{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+    <h1 class="text-center mb-4">{{ category.name }}</h1>
+    <div class="row">
+        {% for flower in flowers %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if flower.image %}
+                        <img src="{{ flower.image.url }}" class="card-img-top" alt="{{ flower.name }}" width="100">
+                    {% else %}
+                        <p>Изображение отсутствует</p>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ flower.name }}</h5>
+                        <p class="card-text">{{ flower.price }} руб.</p>
+                        <form method="post" action="{% url 'add_to_cart' flower.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</main>
+{% endblock %}
