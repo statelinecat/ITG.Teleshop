@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    <title>Отзывы о {{ product.name }}</title>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Отзывы о {{ product.name }}</h1>
+    
+    <!-- Форма для добавления отзыва -->
+    {% if user.is_authenticated %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Оставить отзыв</h5>
+                <form method="post" action="{% url 'add_review' product.id %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="reviewText">Ваш отзыв</label>
+                        <textarea class="form-control" id="reviewText" name="text" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="reviewRating">Оценка</label>
+                        <select class="form-control" id="reviewRating" name="rating" required>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <p>Чтобы оставить отзыв, пожалуйста, <a href="{% url 'login' %}">войдите</a> в систему.</p>
+    {% endif %}
+
+    <!-- Список отзывов -->
+    <div class="list-group">
+        {% for review in reviews %}
+            <div class="list-group-item mb-3">
+                <h5>{{ review.user.username }}</h5>
+                <p>{{ review.text }}</p>
+                <small class="text-muted">Рейтинг: {{ review.rating }}/5</small>
+            </div>
+        {% empty %}
+            <p>Отзывов пока нет.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Кнопка "Назад" -->
+    <a href="{% url 'index' %}" class="btn btn-secondary mt-3">Назад к каталогу</a>
+</div>
+{% endblock %}

@@ -30,3 +30,12 @@
     font-size: 0.875rem;
     margin-top: 0.25rem;
 }
+
+/* Стили для полей ввода пароля */
+.form-group input[type="password"] {
+    width: 100%; /* Ширина на весь контейнер */
+    padding: 10px; /* Отступы внутри поля */
+    border: 1px solid #ccc; /* Граница поля */
+    border-radius: 4px; /* Закругленные углы */
+    font-size: 16px; /* Размер шрифта */
+}

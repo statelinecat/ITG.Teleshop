@@ -13,19 +13,29 @@
                     <h1 class="text-center">Вход</h1>
                 </div>
                 <div class="card-body">
+                    <!-- Общие ошибки аутентификации -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Форма входа -->
                     <form method="post">
                         {% csrf_token %}
-                        <div class="form-group">
-                            <label for="id_username">Email</label>
-                            {{ form.username }}
-                        </div>
-                        <div class="form-group">
-                            <label for="id_password">Пароль</label>
-                            {{ form.password }}
-                        </div>
+                        {{ form.as_p }}  <!-- Автоматический рендеринг полей и ошибок -->
                         <button type="submit" class="btn btn-primary btn-block">Войти</button>
                     </form>
+
+                    <!-- Ссылка на регистрацию -->
                     <p class="mt-3 text-center">Нет аккаунта? <a href="{% url 'register' %}">Зарегистрируйтесь</a>.</p>
+
+                    <!-- Ссылка на восстановление пароля -->
+                    <p class="mt-3 text-center">
+                        <a href="{% url 'password_reset' %}">Забыли пароль?</a>
+                    </p>
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-{% extends 'flowershop/base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}
     <title>Лепесток - Оформление заказа</title>
@@ -51,7 +51,7 @@
                 <!-- Поле для комментария -->
                 <div class="form-group mb-3">
                     <label for="comment">Комментарий:</label>
-                    <textarea id="comment" name="comment" class="form-control" rows="3"></textarea>
+                    <textarea id="comment" name="comment" class="form-control" rows="3">{{ default_comment }}</textarea>
                 </div>
 
                 <!-- Кнопка подтверждения заказа -->

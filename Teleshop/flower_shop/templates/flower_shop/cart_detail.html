@@ -11,23 +11,31 @@
     <div class="card">
         <div class="card-body">
             {% if cart and cart.items.all %}
+                <!-- Список товаров в корзине -->
                 <ul class="list-group mb-3">
                     {% for item in cart.items.all %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
+                                <!-- Изображение товара -->
                                 <img src="{{ item.flower.image.url }}" alt="{{ item.flower.name }}" class="img-thumbnail" style="width: 50px; height: 50px; margin-right: 10px;">
                                 <div>
+                                    <!-- Название товара -->
                                     <span>{{ item.flower.name }}</span><br>
+                                    <!-- Цена товара -->
                                     <span>Цена: {{ item.flower.price }} руб.</span><br>
+                                    <!-- Количество товара -->
                                     <span>Количество: {{ item.quantity }}</span><br>
+                                    <!-- Общая стоимость товара -->
                                     <span>Общая стоимость: {{ item.quantity|mul:item.flower.price|floatformat:2 }} руб.</span>
                                 </div>
                             </div>
+                            <!-- Форма для изменения количества товара -->
                             <form method="post" action="{% url 'update_cart_item' item.id %}" class="d-inline-block">
                                 {% csrf_token %}
                                 <input type="number" name="quantity" value="{{ item.quantity }}" min="0" class="form-control d-inline-block w-auto" />
                                 <button type="submit" class="btn btn-primary btn-sm">Изменить</button>
                             </form>
+                            <!-- Форма для удаления товара -->
                             <form method="post" action="{% url 'remove_cart_item' item.id %}" class="d-inline-block">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
@@ -35,17 +43,23 @@
                         </li>
                     {% endfor %}
                 </ul>
+
+                <!-- Общая сумма заказа -->
                 <h5 class="card-title">Сумма заказа: {{ cart.get_total_price }} руб.</h5>
 
+                <!-- Блок с кнопкой "Оформить заказ" -->
                 {% if is_working_time %}
                     <a href="{% url 'checkout' %}" class="btn btn-success">Оформить заказ</a>
                 {% else %}
+                    <!-- Сообщение о нерабочем времени -->
                     <div class="alert alert-warning" role="alert">
                         Заказы принимаются только в рабочие дни (с понедельника по пятницу) с 9:00 до 18:00.
                     </div>
+                    <!-- Кнопка "Оформить заказ" (заблокирована) -->
                     <button class="btn btn-success" disabled>Оформить заказ</button>
                 {% endif %}
             {% else %}
+                <!-- Сообщение, если корзина пуста -->
                 <p>Ваша корзина пуста.</p>
             {% endif %}
         </div>

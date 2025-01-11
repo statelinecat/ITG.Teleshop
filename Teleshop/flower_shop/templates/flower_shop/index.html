@@ -6,26 +6,28 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Добро пожаловать в Teleshop!</h1>
-    <h2>Категории</h2>
-    <ul class="list-group">
-        {% for category in categories %}
-        <li class="list-group-item">
-            <a href="{% url 'product_list_by_category' category.slug %}">{{ category.name }}</a>
-        </li>
-        {% endfor %}
-    </ul>
+    <!-- Красивая надпись в центре -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 font-weight-bold" style="color: #333; text-transform: uppercase; letter-spacing: 3px;">
+            Лепесток свежие цветы с доставкой
+        </h1>
+    </div>
 
-    <h2 class="mt-4">Популярные товары</h2>
     <div class="row">
-        {% for product in popular_products %}
+        {% for category in categories %}
         <div class="col-md-4 mb-4">
             <div class="card">
-                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                <!-- Изображение категории -->
+                {% if category.image %}
+                    <img src="{{ category.image.url }}" class="card-img-top" alt="{{ category.name }}">
+                {% else %}
+                    <img src="/path/to/default/image.jpg" class="card-img-top" alt="{{ category.name }}">
+                {% endif %}
                 <div class="card-body">
-                    <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text">{{ product.price }} руб.</p>
-                    <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary">Добавить в корзину</a>
+                    <!-- Название категории -->
+                    <h5 class="card-title">{{ category.name }}</h5>
+                    <!-- Ссылка на страницу категории -->
+                    <a href="{% url 'product_list_by_category' category.slug %}" class="btn btn-primary">Перейти к товарам</a>
                 </div>
             </div>
         </div>

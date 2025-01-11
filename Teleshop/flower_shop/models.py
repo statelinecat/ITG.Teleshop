@@ -65,6 +65,18 @@ class Cart(models.Model):
     def __str__(self):
         return f"Корзина пользователя {self.user.username}"
 
+    def get_total_price(self):
+        """
+        Возвращает общую стоимость товаров в корзине.
+        """
+        return sum(item.product.price * item.quantity for item in self.items.all())
+
+    def get_total_quantity(self):
+        """
+        Возвращает общее количество товаров в корзине.
+        """
+        return sum(item.quantity for item in self.items.all())
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -82,19 +94,24 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
-    products = models.ManyToManyField(Product, through='OrderItem', verbose_name="Товары")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='accepted', verbose_name="Статус заказа")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     def __str__(self):
         return f"Заказ {self.id} от {self.user.username} (Статус: {self.get_status_display()})"
 
+    def get_total_price(self):
+        """
+        Возвращает общую стоимость заказа.
+        """
+        return sum(item.product.price * item.quantity for item in self.items.all())
+
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', verbose_name="Заказ")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
     quantity = models.PositiveIntegerField(default=1, verbose_name="Количество")
 

@@ -1,4 +1,4 @@
-{% extends 'flowershop/base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}
     <title>Лепесток - Мои заказы</title>
@@ -7,13 +7,28 @@
 {% block content %}
 <div class="container mt-5">
     <h1 class="mb-4">Мои заказы</h1>
+
+    <!-- Форма для фильтрации заказов по статусу -->
+    <form method="get" action="{% url 'order_list' %}" class="mb-4">
+        <div class="form-group">
+            <label for="status">Фильтр по статусу:</label>
+            <select name="status" id="status" class="form-control">
+                <option value="">Все заказы</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Применить фильтр</button>
+    </form>
+
     {% if orders %}
         <div class="list-group">
             {% for order in orders %}
                 <div class="list-group-item mb-3">
                     <h5>Заказ №{{ order.id }}</h5>
-                    <p>Сумма заказа: {{ order.total_price }} руб.</p>
-                    <p>Дата оформления: {{ order.created_at }}</p>
+                    <p>Сумма заказа: {{ order.get_total_price }} руб.</p>
+                    <p>Дата оформления: {{ order.created_at|date:"d M Y H:i" }}</p>
                     <p>Статус заказа: {{ order.get_status_display }}</p>
 
                     <!-- Список товаров в заказе -->
@@ -21,21 +36,34 @@
                     <ul>
                         {% for item in order.items.all %}
                             <li>
-                                {{ item.flower.name }} - {{ item.quantity }} шт. ({{ item.price }} руб. за шт.)
+                                {{ item.product.name }} - {{ item.quantity }} шт. ({{ item.product.price }} руб. за шт.)
                             </li>
                         {% endfor %}
                     </ul>
 
                     <!-- Кнопка "Повторить заказ" -->
-                    <form method="post" action="{% url 'reorder' order.id %}">
+                    <form method="post" action="{% url 'reorder' order.id %}" class="mb-2">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-primary">Повторить заказ</button>
                     </form>
+
+                    <!-- Форма для изменения статуса заказа (только для администраторов) -->
+                    {% if user.is_staff %}
+                        <form method="post" action="{% url 'change_order_status' order.id %}">
+                            {% csrf_token %}
+                            <select name="status" class="form-control mb-2">
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-warning">Изменить статус</button>
+                        </form>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <p>У вас пока нет заказов.</p>
+        <p>Заказов с выбранным статусом нет.</p>
     {% endif %}
 </div>
 {% endblock %}

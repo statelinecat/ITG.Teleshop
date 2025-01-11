@@ -5,6 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .cart-badge {
+            color: red; /* Красный цвет текста */
+            border: 1px solid green; /* Красная рамка */
+            border-radius: 50%; /* Круглая форма */
+            padding: 2px 6px; /* Отступы внутри бейджа */
+            font-size: 0.8em; /* Размер текста */
+            margin-left: 5px; /* Отступ слева от текста "Корзина" */
+            box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+        }
+    </style>
     {% block title %}
     {% endblock %}
 </head>
@@ -19,25 +30,39 @@
                 <h6>Лепесток доставка цветов</h6>
             </div>
             <nav class="nav">
-                <a class="nav-link" href="{% url 'catalog' %}">Каталог</a>
-                <a class="nav-link" href="#">Отзывы</a>
-                <a class="nav-link" href="{% url 'cart_detail' %}">Корзина</a>
-                <a class="nav-link" href="#">Избранное</a>
-                <a class="nav-link" href="#">Поиск</a>
-                {% if user.is_authenticated %}
-                    <a class="nav-link" href="{% url 'order_list' %}" class="btn btn-primary">Мои заказы</a>
-                    <form action="{% url 'user_logout' %}" method="post" style="display: inline;">
+                <a class="nav-link" href="{% url 'index' %}">Каталог</a>
+                <a class="nav-link" href="{% url 'cart_detail' %}">
+                    Корзина
+                    {% if cart_quantity > 0 %}
+                        <span class="cart-badge">{{ cart_quantity }}</span>
+                    {% endif %}
+                </a>
+                    {% if user.is_authenticated %}
+                    <a class="nav-link" href="{% url 'order_list' %}">Мои заказы</a>
+                    <form action="{% url 'user_logout' %}" method="post" class="d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="nav-link btn btn-link" style="padding: 0; border: none; background: none;">Выход</button>
+                        <button type="submit" class="nav-link btn btn-link">Выход</button>
                     </form>
                 {% else %}
-                    <a class="nav-link" href="{% url 'user_login' %}">Войти</a>
+                    <a class="nav-link" href="{% url 'login' %}">Войти</a>
                 {% endif %}
             </nav>
         </div>
     </div>
 </header>
 
+<!-- Сообщения -->
+{% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- Основное содержимое страницы -->
 {% block content %}
 {% endblock %}
 
@@ -55,9 +80,8 @@
                 <nav class="nav flex-column">
                     <a class="nav-link" href="#">О нас</a>
                     <a class="nav-link" href="{% url 'catalog' %}">Каталог</a>
-                    <a class="nav-link" href="#">Отзывы</a>
                     <a class="nav-link" href="#">Личный кабинет</a>
-                    <a class="nav-link" href="#">Корзина</a>
+                    <a class="nav-link" href="{% url 'cart_detail' %}">Корзина</a>
                 </nav>
             </div>
             <div class="col-md-4">

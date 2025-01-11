@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -64,6 +64,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'flower_shop.context_processors.working_time',
+                'flower_shop.context_processors.cart_quantity',
             ],
         },
     },
@@ -105,11 +107,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
+LANGUAGE_CODE = 'ru-ru'  # Устанавливаем русский язык
+TIME_ZONE = 'Europe/Moscow'  # Устанавливаем московское время
+USE_I18N = True  # Включаем поддержку интернационализации
+USE_L10N = True  # Включаем локализацию
 
 USE_TZ = True
 
@@ -123,3 +124,27 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # Стандартный бэкенд
+    'flower_shop.backends.EmailBackend',  # Ваш кастомный бэкенд
+]
+
+LOGIN_REDIRECT_URL = 'index'  # Имя URL-шаблона для главной страницы
+
+AUTH_USER_MODEL = 'flower_shop.User'
+
+MEDIA_URL = '/media/'  # URL-префикс для медиа-файлов
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Путь к папке с медиа-файлами
+
+LOGIN_URL = 'login'  # Указываем имя URL-шаблона для страницы входа
+
+# Настройки для отправки email (тестирование через консоль)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Если вы хотите использовать реальный email-сервер, настройте следующие параметры:
+# EMAIL_HOST = 'smtp.yandex.ru'  # Например, для Yandex
+# EMAIL_PORT = 465
+# EMAIL_USE_SSL = True
+# EMAIL_HOST_USER = 'ваш_email@yandex.ru'
+# EMAIL_HOST_PASSWORD = 'ваш_пароль'
