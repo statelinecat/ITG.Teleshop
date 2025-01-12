@@ -54,10 +54,38 @@
                     <textarea id="comment" name="comment" class="form-control" rows="3">{{ default_comment }}</textarea>
                 </div>
 
+                <!-- Привязка Telegram ID -->
+                <div class="form-group mb-3">
+                    <label for="telegram_id">Привязка Telegram ID (необязательно):</label>
+                    <div class="input-group">
+                        <input type="text" id="telegram_id" name="telegram_id" class="form-control" placeholder="Введите код привязки" readonly>
+                        <button type="button" id="generate-code-btn" class="btn btn-secondary">Получить код</button>
+                    </div>
+                    <small class="form-text text-muted">
+                        Если вы хотите получать уведомления о статусе заказа через Telegram, нажмите "Получить код" и введите его в нашем боте:
+                        <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a>.
+                    </small>
+                </div>
+
                 <!-- Кнопка подтверждения заказа -->
                 <button type="submit" class="btn btn-success">Подтвердить заказ</button>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    // JavaScript для генерации кода привязки
+    document.getElementById('generate-code-btn').addEventListener('click', function() {
+        fetch("{% url 'generate_link_code' %}")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('telegram_id').value = data.code;
+            })
+            .catch(error => {
+                console.error('Ошибка при генерации кода:', error);
+            });
+    });
+</script>
+
 {% endblock %}
