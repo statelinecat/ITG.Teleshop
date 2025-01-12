@@ -8,25 +8,44 @@
 <div class="container mt-5">
     <h1 class="mb-4">Мои заказы</h1>
 
-    <!-- Форма для фильтрации заказов по статусу -->
-    <form method="get" action="{% url 'order_list' %}" class="mb-4">
-        <div class="form-group">
-            <label for="status">Фильтр по статусу:</label>
-            <select name="status" id="status" class="form-control">
-                <option value="">Все заказы</option>
-                {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Применить фильтр</button>
-    </form>
+    <!-- Форма для фильтрации заказов по статусу и датам (только для администраторов) -->
+    {% if user.is_staff %}
+        <form method="get" action="{% url 'order_list' %}" class="mb-4">
+            <div class="form-group">
+                <label for="status">Фильтр по статусу:</label>
+                <select name="status" id="status" class="form-control" multiple>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if value in selected_statuses %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">Для выбора нескольких статусов удерживайте Ctrl (Windows) или Command (Mac).</small>
+            </div>
+
+            <!-- Поля для фильтрации по датам -->
+            <div class="form-group">
+                <label for="start_date">Дата начала:</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request.GET.start_date }}">
+            </div>
+            <div class="form-group">
+                <label for="end_date">Дата окончания:</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request.GET.end_date }}">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Применить фильтр</button>
+        </form>
+    {% endif %}
 
     {% if orders %}
         <div class="list-group">
             {% for order in orders %}
                 <div class="list-group-item mb-3">
                     <h5>Заказ №{{ order.id }}</h5>
+
+                    <!-- Отображение имени пользователя, сделавшего заказ (только для администраторов) -->
+                    {% if user.is_staff %}
+                        <p>Пользователь: {{ order.user.username }}</p>
+                    {% endif %}
+
                     <p>Сумма заказа: {{ order.get_total_price }} руб.</p>
                     <p>Дата оформления: {{ order.created_at|date:"d M Y H:i" }}</p>
                     <p>Статус заказа: {{ order.get_status_display }}</p>
@@ -41,16 +60,26 @@
                         {% endfor %}
                     </ul>
 
-                    <!-- Кнопка "Повторить заказ" -->
-                    <form method="post" action="{% url 'reorder' order.id %}" class="mb-2">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-primary">Повторить заказ</button>
-                    </form>
+                    <!-- Кнопка "Повторить заказ" (только для заказов текущего пользователя) -->
+                    {% if order.user == request.user %}
+                        <form method="post" action="{% url 'reorder' order.id %}" class="mb-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Повторить заказ</button>
+                        </form>
+                    {% endif %}
 
                     <!-- Форма для изменения статуса заказа (только для администраторов) -->
                     {% if user.is_staff %}
                         <form method="post" action="{% url 'change_order_status' order.id %}">
                             {% csrf_token %}
+                            <!-- Скрытые поля для передачи параметров фильтрации -->
+                            <input type="hidden" name="start_date" value="{{ request.GET.start_date }}">
+                            <input type="hidden" name="end_date" value="{{ request.GET.end_date }}">
+                            {% for status in selected_statuses %}
+                                <input type="hidden" name="filter_status" value="{{ status }}">
+                            {% endfor %}
+
+                            <!-- Выпадающий список для изменения статуса заказа -->
                             <select name="status" class="form-control mb-2">
                                 {% for value, label in status_choices %}
                                     <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
@@ -63,7 +92,7 @@
             {% endfor %}
         </div>
     {% else %}
-        <p>Заказов с выбранным статусом нет.</p>
+        <p>Заказов с выбранным статусом или в выбранном диапазоне дат нет.</p>
     {% endif %}
 </div>
 {% endblock %}

@@ -5,6 +5,10 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, get_object_or_404, redirect
 from datetime import datetime, timedelta
+
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.http import urlencode
 from django.views.decorators.http import require_http_methods
 from .models import User, Review
 
@@ -96,10 +100,30 @@ def checkout(request):
 @login_required
 def order_list(request):
     """
-    Список заказов пользователя (или всех заказов для администратора) с фильтрацией по статусу.
+    Список заказов пользователя (или всех заказов для администратора) с фильтрацией по статусу и датам.
+    По умолчанию отображаются заказы за текущий день (с учетом локального времени).
     """
-    # Получаем выбранный статус из GET-запроса
-    selected_status = request.GET.get('status')
+    # Получаем выбранные статусы и даты из GET-запроса
+    selected_statuses = request.GET.getlist('status')  # Множественный выбор статусов
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    # Устанавливаем значения по умолчанию для дат (текущий день)
+    today_local = timezone.localtime(timezone.now()).date()  # Текущая дата в локальном времени
+    if not start_date:
+        start_date = today_local
+    if not end_date:
+        end_date = today_local
+
+    # Преобразуем start_date и end_date в объекты date
+    if isinstance(start_date, str):
+        start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+    if isinstance(end_date, str):
+        end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    # Преобразуем даты в UTC для фильтрации
+    start_datetime_utc = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
+    end_datetime_utc = timezone.make_aware(timezone.datetime.combine(end_date + timedelta(days=1), timezone.datetime.min.time()))
 
     # Базовый запрос для заказов
     if request.user.is_staff:
@@ -107,15 +131,21 @@ def order_list(request):
     else:
         orders = Order.objects.filter(user=request.user).prefetch_related('items__product')  # Только заказы пользователя
 
-    # Фильтрация по статусу, если статус выбран
-    if selected_status:
-        orders = orders.filter(status=selected_status)
+    # Фильтрация по статусам, если статусы выбраны
+    if selected_statuses:
+        orders = orders.filter(status__in=selected_statuses)
+
+    # Фильтрация по датам
+    orders = orders.filter(created_at__gte=start_datetime_utc, created_at__lt=end_datetime_utc)
 
     return render(request, 'flower_shop/order_list.html', {
         'orders': orders,
-        'selected_status': selected_status,  # Передаем выбранный статус в шаблон
+        'selected_statuses': selected_statuses,  # Передаем выбранные статусы в шаблон
         'status_choices': Order.STATUS_CHOICES,  # Передаем все возможные статусы
+        'start_date': start_date.strftime('%Y-%m-%d'),  # Передаем начальную дату в шаблон
+        'end_date': end_date.strftime('%Y-%m-%d'),  # Передаем конечную дату в шаблон
     })
+
 
 def register(request):
     """
@@ -214,10 +244,35 @@ def add_review(request, product_id):
 
 @user_passes_test(lambda u: u.is_staff)  # Только для администраторов
 def change_order_status(request, order_id):
+    """
+    Изменение статуса заказа с сохранением текущих параметров фильтрации.
+    """
     if request.method == 'POST':
         order = get_object_or_404(Order, id=order_id)
-        new_status = request.POST.get('status')
+        new_status = request.POST.get('status')  # Новый статус заказа
         if new_status in dict(Order.STATUS_CHOICES).keys():  # Проверяем, что статус допустим
             order.status = new_status
             order.save()
-    return redirect('order_list')  # Перенаправляем на страницу списка заказов
+
+        # Получаем параметры фильтрации из POST-запроса
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        filter_statuses = request.POST.getlist('filter_status')  # Список статусов фильтрации
+
+        # Формируем параметры для URL
+        filter_params = {}
+        if start_date:
+            filter_params['start_date'] = start_date
+        if end_date:
+            filter_params['end_date'] = end_date
+        if filter_statuses:
+            filter_params['status'] = filter_statuses  # Используем filter_statuses для фильтрации
+
+        # Формируем URL с текущими параметрами фильтрации
+        url = reverse('order_list')  # Базовый URL для списка заказов
+        if filter_params:
+            url += '?' + urlencode(filter_params, doseq=True)  # Добавляем параметры фильтрации
+
+        return redirect(url)  # Перенаправляем с сохранением фильтров
+
+    return redirect('order_list')  # Если метод не POST, просто перенаправляем на список заказов
