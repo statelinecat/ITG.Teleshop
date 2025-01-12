@@ -37,8 +37,11 @@
                         <span class="cart-badge">{{ cart_quantity }}</span>
                     {% endif %}
                 </a>
-                    {% if user.is_authenticated %}
+                {% if user.is_authenticated %}
                     <a class="nav-link" href="{% url 'order_list' %}">Мои заказы</a>
+                    {% if user.is_staff %}
+                        <a class="nav-link" href="{% url 'order_report' %}">Отчеты</a>
+                    {% endif %}
                     <form action="{% url 'user_logout' %}" method="post" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="nav-link btn btn-link">Выход</button>
@@ -76,16 +79,13 @@
                 <p>Телефон: +7 123 456 7890</p>
             </div>
             <div class="col-md-4">
-                <h5>Меню</h5>
-                <nav class="nav flex-column">
-                    <a class="nav-link" href="#">О нас</a>
-                    <a class="nav-link" href="{% url 'catalog' %}">Каталог</a>
-                    <a class="nav-link" href="#">Личный кабинет</a>
-                    <a class="nav-link" href="{% url 'cart_detail' %}">Корзина</a>
-                </nav>
+                <h5> </h5>
+                <p> </p>
+                <p> </p>
             </div>
-            <div class="col-md-4">
-                <h5>© 2023 Интернет-каталог цветов</h5>
+
+            <div class="col-md-4 text-right"> <!-- Добавлен класс text-right -->
+                <h5>© 2025 Лепесток доставка цветов</h5>
             </div>
         </div>
     </div>

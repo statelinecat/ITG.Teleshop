@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.urls import path
 from django.contrib.auth.views import LogoutView, PasswordResetView, PasswordResetDoneView, PasswordResetConfirmView, PasswordResetCompleteView
 from . import views
-from .views import CustomLoginView
+from .views import CustomLoginView, order_report, export_order_report, export_order_report_excel
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -28,6 +28,9 @@ urlpatterns = [
     path('reset/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('reset/done/', PasswordResetCompleteView.as_view(), name='password_reset_complete'),
     path('order/change_status/<int:order_id>/', views.change_order_status, name='change_order_status'),
+    path('order_report/', order_report, name='order_report'),
+    path('export_order_report/', export_order_report, name='export_order_report'),
+    path('export_order_report_excel/', export_order_report_excel, name='export_order_report_excel'),
 ]
 
 if settings.DEBUG:

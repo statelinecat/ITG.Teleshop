@@ -1,5 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils.text import slugify
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
@@ -80,10 +85,14 @@ class Cart(models.Model):
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"
+
+    class Meta:
+        verbose_name = "Элемент корзины"
+        verbose_name_plural = "Элементы корзины"
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -96,6 +105,13 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='accepted', verbose_name="Статус заказа")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    # Поля для данных заказа
+    name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Имя")
+    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
+    address = models.TextField(blank=True, null=True, verbose_name="Адрес доставки")
+    delivery_time = models.DateTimeField(blank=True, null=True, verbose_name="Время доставки")
+    comment = models.TextField(blank=True, null=True, verbose_name="Комментарий")
 
     def __str__(self):
         return f"Заказ {self.id} от {self.user.username} (Статус: {self.get_status_display()})"
@@ -113,7 +129,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', verbose_name="Заказ")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
-    quantity = models.PositiveIntegerField(default=1, verbose_name="Количество")
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name}"
@@ -126,7 +142,11 @@ class Review(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
     text = models.TextField(verbose_name="Текст отзыва")
-    rating = models.PositiveIntegerField(default=5, verbose_name="Рейтинг")
+    rating = models.PositiveIntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="Рейтинг"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     def __str__(self):
@@ -136,16 +156,35 @@ class Review(models.Model):
         verbose_name = "Отзыв"
         verbose_name_plural = "Отзывы"
 
+def default_period_start():
+    return timezone.now().date()
+
+def default_period_end():
+    return timezone.now().date()
+
 class Report(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Заказ")
     date = models.DateField(auto_now_add=True, verbose_name="Дата отчета")
-    sales_data = models.TextField(verbose_name="Данные по продажам")
-    profit = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Прибыль")
-    expenses = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Расходы")
+    total_orders = models.PositiveIntegerField(default=0, verbose_name="Общее количество заказов")
+    total_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Общая выручка")
+    period_start = models.DateField(default=default_period_start, verbose_name="Начало периода")  # Используем функцию
+    period_end = models.DateField(default=default_period_end, verbose_name="Конец периода")  # Используем функцию
 
     def __str__(self):
-        return f"Отчет за {self.date}"
+        return f"Отчет за {self.period_start} - {self.period_end}"
+
+    def profit(self):
+        return self.total_revenue * 0.2  # Пример: 20% прибыли
+
+    def expenses(self):
+        return self.total_revenue * 0.1  # Пример: 10% расходов
 
     class Meta:
         verbose_name = "Отчет"
         verbose_name_plural = "Отчеты"
+
+
+# Сигнал для автоматического создания корзины при создании пользователя
+@receiver(post_save, sender=User)
+def create_user_cart(sender, instance, created, **kwargs):
+    if created:
+        Cart.objects.create(user=instance)
