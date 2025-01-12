@@ -14,7 +14,7 @@ from .views import (
     order_report,
     export_order_report,
     export_order_report_excel,
-    generate_link_code,  # Импортируем generate_link_code
+    generate_link_code, auth_with_telegram_id,  # Импортируем generate_link_code
 )
 
 urlpatterns = [
@@ -49,6 +49,7 @@ urlpatterns = [
 
     # Маршрут для генерации кода привязки Telegram
     path('generate-link-code/', generate_link_code, name='generate_link_code'),
+    path('auth/', auth_with_telegram_id, name='auth_with_telegram_id'),
 ]
 
 # Добавляем маршруты для медиа-файлов в режиме DEBUG

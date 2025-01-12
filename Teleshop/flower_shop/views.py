@@ -75,7 +75,8 @@ def checkout(request):
         default_name = last_order.name if last_order.name else default_name
         default_phone = last_order.phone if last_order.phone else default_phone
         default_address = last_order.address if last_order.address else default_address
-        default_delivery_time = last_order.delivery_time.strftime('%Y-%m-%dT%H:%M') if last_order.delivery_time else default_delivery_time.strftime('%Y-%m-%dT%H:%M')
+        default_delivery_time = last_order.delivery_time.strftime(
+            '%Y-%m-%dT%H:%M') if last_order.delivery_time else default_delivery_time.strftime('%Y-%m-%dT%H:%M')
         default_comment = last_order.comment if last_order.comment else default_comment
 
     if request.method == 'POST':
@@ -101,6 +102,7 @@ def checkout(request):
         'default_address': default_address,
         'default_delivery_time': default_delivery_time,
         'default_comment': default_comment,
+        'telegram_id_attached': bool(request.user.telegram_id),  # Проверка привязки Telegram ID
     })
 
 @login_required
@@ -110,36 +112,50 @@ def order_list(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    today_local = timezone.localtime(timezone.now()).date()
-    if not start_date:
-        start_date = today_local
-    if not end_date:
-        end_date = today_local
+    # Для обычных пользователей не применяем фильтрацию по датам и статусам
+    if request.user.is_staff:
+        today_local = timezone.localtime(timezone.now()).date()
+        if not start_date:
+            start_date = today_local
+        if not end_date:
+            end_date = today_local
 
-    if isinstance(start_date, str):
-        start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
-    if isinstance(end_date, str):
-        end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+        if isinstance(start_date, str):
+            start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+        if isinstance(end_date, str):
+            end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    start_datetime_utc = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
-    end_datetime_utc = timezone.make_aware(timezone.datetime.combine(end_date + timedelta(days=1), timezone.datetime.min.time()))
+        start_datetime_utc = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
+        end_datetime_utc = timezone.make_aware(
+            timezone.datetime.combine(end_date + timedelta(days=1), timezone.datetime.min.time()))
+    else:
+        # Для обычных пользователей не применяем фильтрацию по датам и статусам
+        start_datetime_utc = None
+        end_datetime_utc = None
+        selected_statuses = []
 
     if request.user.is_staff:
         orders = Order.objects.all().prefetch_related('items__product')
     else:
         orders = Order.objects.filter(user=request.user).prefetch_related('items__product')
 
-    if selected_statuses:
+    # Фильтрация по статусам только для администраторов
+    if request.user.is_staff and selected_statuses:
         orders = orders.filter(status__in=selected_statuses)
 
-    orders = orders.filter(created_at__gte=start_datetime_utc, created_at__lt=end_datetime_utc)
+    # Фильтрация по датам только для администраторов
+    if request.user.is_staff and start_datetime_utc and end_datetime_utc:
+        orders = orders.filter(created_at__gte=start_datetime_utc, created_at__lt=end_datetime_utc)
+
+    # Сортировка заказов по дате создания (сначала новые)
+    orders = orders.order_by('-created_at')
 
     return render(request, 'flower_shop/order_list.html', {
         'orders': orders,
         'selected_statuses': selected_statuses,
         'status_choices': Order.STATUS_CHOICES,
-        'start_date': start_date.strftime('%Y-%m-%d'),
-        'end_date': end_date.strftime('%Y-%m-%d'),
+        'start_date': start_date.strftime('%Y-%m-%d') if start_date else '',
+        'end_date': end_date.strftime('%Y-%m-%d') if end_date else '',
     })
 
 def register(request):
@@ -385,3 +401,25 @@ def generate_link_code(request):
     except Exception as e:
         logger.error(f"Error generating link code for user {user.username}: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+def auth_with_telegram_id(request):
+    """
+    Авторизация пользователя по Telegram ID.
+    Если Telegram ID не привязан, перенаправляет на главную страницу.
+    """
+    telegram_id = request.GET.get('telegram_id')
+
+    # Если Telegram ID не передан, перенаправляем на главную страницу
+    if not telegram_id:
+        return redirect('index')
+
+    # Пытаемся найти пользователя по Telegram ID
+    try:
+        user = User.objects.get(telegram_id=telegram_id)
+        # Авторизуем пользователя с указанием бэкенда
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        # Перенаправляем на главную страницу
+        return redirect('index')
+    except User.DoesNotExist:
+        # Если пользователь не найден, перенаправляем на главную страницу без авторизации
+        return redirect('index')

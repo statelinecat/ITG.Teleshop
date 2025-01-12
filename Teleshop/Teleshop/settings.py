@@ -134,8 +134,8 @@ LOGIN_REDIRECT_URL = 'index'  # Имя URL-шаблона для главной 
 
 AUTH_USER_MODEL = 'flower_shop.User'
 
-MEDIA_URL = '/media/'  # URL-префикс для медиа-файлов
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Путь к папке с медиа-файлами
+MEDIA_URL = '/media/'  # URL-префикс для медиафайлов
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Путь к папке с медиафайлами
 
 LOGIN_URL = 'login'  # Указываем имя URL-шаблона для страницы входа
 
@@ -169,3 +169,9 @@ LOGGING = {
         },
     },
 }
+
+ALLOWED_HOSTS = [
+    'localhost',  # Разрешить локальный доступ
+    '127.0.0.1',  # Разрешить доступ по IP
+    '1ad0-185-21-13-3.ngrok-free.app',  # Разрешить доступ через ngrok
+]

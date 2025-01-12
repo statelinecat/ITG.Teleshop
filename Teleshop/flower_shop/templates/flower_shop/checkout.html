@@ -54,7 +54,8 @@
                     <textarea id="comment" name="comment" class="form-control" rows="3">{{ default_comment }}</textarea>
                 </div>
 
-                <!-- Привязка Telegram ID -->
+                <!-- Привязка Telegram ID (показываем только если Telegram ID не привязан) -->
+                {% if not telegram_id_attached %}
                 <div class="form-group mb-3">
                     <label for="telegram_id">Привязка Telegram ID (необязательно):</label>
                     <div class="input-group">
@@ -66,6 +67,7 @@
                         <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a>.
                     </small>
                 </div>
+                {% endif %}
 
                 <!-- Кнопка подтверждения заказа -->
                 <button type="submit" class="btn btn-success">Подтвердить заказ</button>

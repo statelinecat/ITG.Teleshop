@@ -14,7 +14,7 @@ class User(AbstractUser):
     """
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес")
-    telegram_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Telegram ID")
+    telegram_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Telegram ID", db_index=True)
     link_code = models.CharField(max_length=8, blank=True, null=True, verbose_name="Код привязки")
 
     # Уникальные related_name для groups и user_permissions
@@ -77,7 +77,12 @@ class Product(models.Model):
     Модель товара.
     """
     name = models.CharField(max_length=255, verbose_name="Название товара")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Цена",
+        validators=[MinValueValidator(0)]
+    )
     image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Изображение товара")
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', verbose_name="Категория")
     description = models.TextField(blank=True, null=True, verbose_name="Описание товара")
@@ -104,13 +109,13 @@ class Cart(models.Model):
         """
         Возвращает общую стоимость товаров в корзине.
         """
-        return sum(item.product.price * item.quantity for item in self.items.all())
+        return sum(item.product.price * item.quantity for item in self.items.all()) if self.items.exists() else 0
 
     def get_total_quantity(self):
         """
         Возвращает общее количество товаров в корзине.
         """
-        return sum(item.quantity for item in self.items.all())
+        return sum(item.quantity for item in self.items.all()) if self.items.exists() else 0
 
     class Meta:
         verbose_name = "Корзина"
@@ -130,6 +135,7 @@ class CartItem(models.Model):
     class Meta:
         verbose_name = "Элемент корзины"
         verbose_name_plural = "Элементы корзины"
+        unique_together = ('cart', 'product')  # Уникальная пара cart и product
 
 class Order(models.Model):
     """
@@ -160,7 +166,7 @@ class Order(models.Model):
         """
         Возвращает общую стоимость заказа.
         """
-        return sum(item.product.price * item.quantity for item in self.items.all())
+        return sum(item.product.price * item.quantity for item in self.items.all()) if self.items.exists() else 0
 
     class Meta:
         verbose_name = "Заказ"
@@ -180,6 +186,7 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = "Элемент заказа"
         verbose_name_plural = "Элементы заказа"
+        unique_together = ('order', 'product')  # Уникальная пара order и product
 
 class Review(models.Model):
     """
@@ -193,7 +200,7 @@ class Review(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)],
         verbose_name="Рейтинг"
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания", db_index=True)
 
     def __str__(self):
         return f"Отзыв от {self.user.username} на {self.product.name}"
@@ -218,7 +225,7 @@ class Report(models.Model):
     """
     Модель отчета по заказам.
     """
-    date = models.DateField(auto_now_add=True, verbose_name="Дата отчета")
+    date = models.DateField(auto_now_add=True, verbose_name="Дата отчета", db_index=True)
     total_orders = models.PositiveIntegerField(default=0, verbose_name="Общее количество заказов")
     total_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Общая выручка")
     period_start = models.DateField(default=default_period_start, verbose_name="Начало периода")
