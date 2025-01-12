@@ -55,6 +55,22 @@
                                 </div>
                             {% endif %}
                         </div>
+                        <!-- Кнопка для генерации кода привязки -->
+                        <div class="form-group">
+                            <button type="button" id="generate-code-btn" class="btn btn-secondary btn-block">Получить код для привязки Telegram</button>
+                            <small class="form-text text-muted">
+                                Если вы хотите получать уведомления о статусе заказов через Telegram, нажмите кнопку выше.
+                                Затем перейдите в нашего бота <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a> и введите полученный код.
+                            </small>
+                        </div>
+                        <!-- Поле для отображения кода -->
+                        <div class="form-group" id="code-display" style="display: none;">
+                            <label for="link-code">Ваш код для привязки:</label>
+                            <input type="text" id="link-code" class="form-control" readonly>
+                            <small class="form-text text-muted">
+                                Введите этот код в Telegram-боте <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a> для привязки аккаунта.
+                            </small>
+                        </div>
                         <!-- Кнопка регистрации -->
                         <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
                     </form>
@@ -64,4 +80,15 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('generate-code-btn').addEventListener('click', function() {
+        fetch("{% url 'generate_link_code' %}")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('link-code').value = data.code;
+                document.getElementById('code-display').style.display = 'block';
+            });
+    });
+</script>
 {% endblock %}

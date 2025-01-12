@@ -5,38 +5,62 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import random
+import string
 
 class User(AbstractUser):
+    """
+    Модель пользователя с дополнительными полями для телефона, адреса, Telegram ID и кода привязки.
+    """
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес")
+    telegram_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Telegram ID")
+    link_code = models.CharField(max_length=8, blank=True, null=True, verbose_name="Код привязки")
 
-    # Указываем уникальные related_name для groups и user_permissions
+    # Уникальные related_name для groups и user_permissions
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='Группы',
         blank=True,
-        related_name='flower_shop_users',  # Уникальный related_name
+        related_name='flower_shop_users',
         related_query_name='flower_shop_user',
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
         verbose_name='Права доступа',
         blank=True,
-        related_name='flower_shop_users',  # Уникальный related_name
+        related_name='flower_shop_users',
         related_query_name='flower_shop_user',
     )
+
+    def generate_link_code(self):
+        """
+        Генерация уникального кода для привязки Telegram.
+        Если код уже существует, возвращает его.
+        """
+        if not self.link_code:
+            code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            self.link_code = code
+            self.save()
+        return self.link_code
 
     class Meta:
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
 class Category(models.Model):
+    """
+    Модель категории товаров.
+    """
     name = models.CharField(max_length=255, unique=True, verbose_name="Название категории")
     slug = models.SlugField(max_length=255, unique=True, blank=True, verbose_name="URL-адрес категории")
     description = models.TextField(blank=True, null=True, verbose_name="Описание категории")
     image = models.ImageField(upload_to='categories/', blank=True, null=True, verbose_name="Изображение категории")
 
     def save(self, *args, **kwargs):
+        """
+        Автоматически генерирует slug, если он не указан.
+        """
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
@@ -49,6 +73,9 @@ class Category(models.Model):
         verbose_name_plural = "Категории"
 
 class Product(models.Model):
+    """
+    Модель товара.
+    """
     name = models.CharField(max_length=255, verbose_name="Название товара")
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
     image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Изображение товара")
@@ -64,6 +91,9 @@ class Product(models.Model):
         verbose_name_plural = "Товары"
 
 class Cart(models.Model):
+    """
+    Модель корзины пользователя.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -82,7 +112,14 @@ class Cart(models.Model):
         """
         return sum(item.quantity for item in self.items.all())
 
+    class Meta:
+        verbose_name = "Корзина"
+        verbose_name_plural = "Корзины"
+
 class CartItem(models.Model):
+    """
+    Модель элемента корзины.
+    """
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
@@ -95,6 +132,9 @@ class CartItem(models.Model):
         verbose_name_plural = "Элементы корзины"
 
 class Order(models.Model):
+    """
+    Модель заказа.
+    """
     STATUS_CHOICES = [
         ('accepted', 'Принят к работе'),
         ('in_progress', 'Находится в работе'),
@@ -127,6 +167,9 @@ class Order(models.Model):
         verbose_name_plural = "Заказы"
 
 class OrderItem(models.Model):
+    """
+    Модель элемента заказа.
+    """
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', verbose_name="Заказ")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
     quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
@@ -139,6 +182,9 @@ class OrderItem(models.Model):
         verbose_name_plural = "Элементы заказа"
 
 class Review(models.Model):
+    """
+    Модель отзыва на товар.
+    """
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
     text = models.TextField(verbose_name="Текст отзыва")
@@ -157,34 +203,50 @@ class Review(models.Model):
         verbose_name_plural = "Отзывы"
 
 def default_period_start():
+    """
+    Возвращает текущую дату для начала периода по умолчанию.
+    """
     return timezone.now().date()
 
 def default_period_end():
+    """
+    Возвращает текущую дату для конца периода по умолчанию.
+    """
     return timezone.now().date()
 
 class Report(models.Model):
+    """
+    Модель отчета по заказам.
+    """
     date = models.DateField(auto_now_add=True, verbose_name="Дата отчета")
     total_orders = models.PositiveIntegerField(default=0, verbose_name="Общее количество заказов")
     total_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Общая выручка")
-    period_start = models.DateField(default=default_period_start, verbose_name="Начало периода")  # Используем функцию
-    period_end = models.DateField(default=default_period_end, verbose_name="Конец периода")  # Используем функцию
+    period_start = models.DateField(default=default_period_start, verbose_name="Начало периода")
+    period_end = models.DateField(default=default_period_end, verbose_name="Конец периода")
 
     def __str__(self):
         return f"Отчет за {self.period_start} - {self.period_end}"
 
     def profit(self):
-        return self.total_revenue * 0.2  # Пример: 20% прибыли
+        """
+        Возвращает прибыль (20% от выручки).
+        """
+        return self.total_revenue * 0.2
 
     def expenses(self):
-        return self.total_revenue * 0.1  # Пример: 10% расходов
+        """
+        Возвращает расходы (10% от выручки).
+        """
+        return self.total_revenue * 0.1
 
     class Meta:
         verbose_name = "Отчет"
         verbose_name_plural = "Отчеты"
 
-
-# Сигнал для автоматического создания корзины при создании пользователя
 @receiver(post_save, sender=User)
 def create_user_cart(sender, instance, created, **kwargs):
+    """
+    Сигнал для автоматического создания корзины при создании пользователя.
+    """
     if created:
         Cart.objects.create(user=instance)

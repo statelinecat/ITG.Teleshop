@@ -148,3 +148,5 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # EMAIL_USE_SSL = True
 # EMAIL_HOST_USER = 'ваш_email@yandex.ru'
 # EMAIL_HOST_PASSWORD = 'ваш_пароль'
+
+TELEGRAM_BOT_TOKEN = '8010538176:AAEnXXncUzx55BhULeRirz_0f43dRw7Hl6o'
