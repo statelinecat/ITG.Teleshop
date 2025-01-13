@@ -20,18 +20,36 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name', 'category__name')
     list_editable = ('price', 'available')  # Позволяет редактировать прямо в списке
 
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0  # Не показывать дополнительные пустые строки
+    readonly_fields = ('get_total_price',)  # Добавляем вычисляемое поле
+
+    def get_total_price(self, obj):
+        return obj.product.price * obj.quantity
+    get_total_price.short_description = 'Общая стоимость'
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'get_status_display', 'created_at', 'get_total_price')
+    list_display = ('id', 'user', 'get_status_display', 'created_at', 'get_total_price_display')
     list_filter = ('status', 'created_at')
     search_fields = ('user__username', 'id')
     date_hierarchy = 'created_at'  # Иерархия по датам
     readonly_fields = ('created_at',)  # Поле только для чтения
+    inlines = [OrderItemInline]  # Добавляем вложенные элементы заказа
+
+    def get_total_price_display(self, obj):
+        return obj.get_total_price()
+    get_total_price_display.short_description = 'Общая сумма заказа'
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'product', 'quantity')
+    list_display = ('order', 'product', 'quantity', 'get_total_price')
     search_fields = ('order__id', 'product__name')
+
+    def get_total_price(self, obj):
+        return obj.product.price * obj.quantity
+    get_total_price.short_description = 'Общая стоимость'
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):

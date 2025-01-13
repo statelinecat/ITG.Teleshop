@@ -108,11 +108,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'ru-ru'  # Устанавливаем русский язык
+USE_TZ = True
 TIME_ZONE = 'Europe/Moscow'  # Устанавливаем московское время
 USE_I18N = True  # Включаем поддержку интернационализации
 USE_L10N = True  # Включаем локализацию
 
-USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)
@@ -134,8 +135,8 @@ LOGIN_REDIRECT_URL = 'index'  # Имя URL-шаблона для главной 
 
 AUTH_USER_MODEL = 'flower_shop.User'
 
-MEDIA_URL = '/media/'  # URL-префикс для медиа-файлов
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Путь к папке с медиа-файлами
+MEDIA_URL = '/media/'  # URL-префикс для медиафайлов
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Путь к папке с медиафайлами
 
 LOGIN_URL = 'login'  # Указываем имя URL-шаблона для страницы входа
 
@@ -148,3 +149,34 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # EMAIL_USE_SSL = True
 # EMAIL_HOST_USER = 'ваш_email@yandex.ru'
 # EMAIL_HOST_PASSWORD = 'ваш_пароль'
+
+TELEGRAM_BOT_TOKEN = '8010538176:AAEnXXncUzx55BhULeRirz_0f43dRw7Hl6o'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
+}
+
+ALLOWED_HOSTS = [
+    'localhost',  # Разрешить локальный доступ
+    '127.0.0.1',  # Разрешить доступ по IP
+    '1ad0-185-21-13-3.ngrok-free.app',  # Разрешить доступ через ngrok
+]
+
+# settings.py
+BASE_URL = 'https://1ad0-185-21-13-3.ngrok-free.app'  # Для локального окружения (ngrok)
+# BASE_URL = 'https://ваш-домен.com'  # Для продакшн-окружения

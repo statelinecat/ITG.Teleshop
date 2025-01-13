@@ -1,4 +1,4 @@
-{% extends 'flowershop/base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}
     <title>Лепесток - Подтверждение заказа</title>
@@ -17,6 +17,14 @@
             <p>Адрес доставки: {{ order.address }}</p>
             <p>Время доставки: {{ order.delivery_time }}</p>
             <p>Комментарий: {{ order.comment }}</p>
+            {% if order.user.telegram_id %}
+                <p>Уведомления будут отправлены в Telegram.</p>
+            {% else %}
+                <p>
+                    Если вы хотите получать уведомления о статусе заказов через Telegram, привяжите свой аккаунт в нашем боте
+                    <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a>.
+                </p>
+            {% endif %}
         </div>
     </div>
 </div>

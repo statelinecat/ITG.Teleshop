@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block title %}
     <title>Лепесток - Оформление заказа</title>
@@ -20,7 +21,38 @@
     <h1 class="mb-4">Оформление заказа</h1>
     <div class="card">
         <div class="card-body">
-            <h5>Сумма заказа: {{ cart.get_total_price }} руб.</h5>
+            <!-- Детализация товаров -->
+            {% if cart and cart.items.all %}
+                <ul class="list-group mb-3">
+                    {% for item in cart.items.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <!-- Изображение товара -->
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px; margin-right: 10px;">
+                                <div>
+                                    <!-- Название товара -->
+                                    <span>{{ item.product.name }}</span><br>
+                                    <!-- Цена товара -->
+                                    <span>Цена: {{ item.product.price }} руб.</span><br>
+                                    <!-- Количество товара -->
+                                    <span>Количество: {{ item.quantity }}</span><br>
+                                    <!-- Общая стоимость товара -->
+                                    <span>Общая стоимость: {{ item.quantity|mul:item.product.price|floatformat:2 }} руб.</span>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    Ваша корзина пуста. <a href="{% url 'index' %}" class="alert-link">Вернуться к покупкам</a>
+                </div>
+            {% endif %}
+
+            <!-- Общая сумма заказа -->
+            <h5>Сумма заказа: {{ cart.get_total_price|floatformat:2 }} руб.</h5>
+
+            <!-- Форма для уточнения деталей заказа -->
             <form method="post" action="{% url 'checkout' %}">
                 {% csrf_token %}
 
@@ -28,31 +60,51 @@
                 <div class="form-group mb-3">
                     <label for="name">Имя:</label>
                     <input type="text" id="name" name="name" class="form-control" value="{{ default_name }}" required>
+                    <small class="form-text text-muted">Введите ваше имя.</small>
                 </div>
 
                 <!-- Поле для номера телефона -->
                 <div class="form-group mb-3">
                     <label for="phone">Номер телефона:</label>
                     <input type="tel" id="phone" name="phone" class="form-control" value="{{ default_phone }}" required>
+                    <small class="form-text text-muted">Введите ваш номер телефона.</small>
                 </div>
 
                 <!-- Поле для адреса доставки -->
                 <div class="form-group mb-3">
                     <label for="address">Адрес доставки:</label>
                     <input type="text" id="address" name="address" class="form-control" value="{{ default_address }}" required>
+                    <small class="form-text text-muted">Введите адрес доставки.</small>
                 </div>
 
                 <!-- Поле для времени доставки -->
                 <div class="form-group mb-3">
                     <label for="delivery_time">Время доставки:</label>
                     <input type="datetime-local" id="delivery_time" name="delivery_time" class="form-control" value="{{ default_delivery_time }}" required>
+                    <small class="form-text text-muted">Выберите удобное время доставки.</small>
                 </div>
 
                 <!-- Поле для комментария -->
                 <div class="form-group mb-3">
                     <label for="comment">Комментарий:</label>
                     <textarea id="comment" name="comment" class="form-control" rows="3">{{ default_comment }}</textarea>
+                    <small class="form-text text-muted">Укажите дополнительные пожелания по заказу.</small>
                 </div>
+
+                <!-- Привязка Telegram ID (показываем только если Telegram ID не привязан) -->
+                {% if not telegram_id_attached %}
+                <div class="form-group mb-3">
+                    <label for="telegram_id">Привязка Telegram ID (необязательно):</label>
+                    <div class="input-group">
+                        <input type="text" id="telegram_id" name="telegram_id" class="form-control" placeholder="Введите код привязки" readonly>
+                        <button type="button" id="generate-code-btn" class="btn btn-secondary">Получить код</button>
+                    </div>
+                    <small class="form-text text-muted">
+                        Если вы хотите получать уведомления о статусе заказа через Telegram, нажмите "Получить код" и введите его в нашем боте:
+                        <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a>.
+                    </small>
+                </div>
+                {% endif %}
 
                 <!-- Кнопка подтверждения заказа -->
                 <button type="submit" class="btn btn-success">Подтвердить заказ</button>
@@ -60,4 +112,19 @@
         </div>
     </div>
 </div>
+
+<script>
+    // JavaScript для генерации кода привязки
+    document.getElementById('generate-code-btn').addEventListener('click', function() {
+        fetch("{% url 'generate_link_code' %}")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('telegram_id').value = data.code;
+            })
+            .catch(error => {
+                console.error('Ошибка при генерации кода:', error);
+            });
+    });
+</script>
+
 {% endblock %}
