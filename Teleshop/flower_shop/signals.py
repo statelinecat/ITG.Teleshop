@@ -34,7 +34,7 @@ def notify_user_and_admins(sender, instance, **kwargs):
         header = "🆕 <b>Новый заказ</b>\n" if kwargs.get('created') else "🔄 <b>Изменение статуса заказа</b>\n"
         order_items = instance.items.all()
         items_list = "\n".join([f"{item.product.name} x {item.quantity}" for item in order_items])
-        total_price = instance.get_total_price()
+        total_price = instance.get_total_price()  # Получаем общую стоимость заказа
         item_images = [
             f"https://1ad0-185-21-13-3.ngrok-free.app{item.product.image.url}" if item.product.image else None
             for item in order_items
@@ -45,7 +45,7 @@ def notify_user_and_admins(sender, instance, **kwargs):
             f"🛒 <b>Заказ #{instance.id}</b>\n"
             f"📊 <b>Статус:</b> {instance.get_status_display()}\n"
             f"📅 <b>Дата оформления:</b> {instance.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
-            f"💰 <b>Сумма заказа:</b> {total_price:.2f} руб.\n"
+            f"💰 <b>Сумма заказа:</b> {total_price:.2f} руб.\n"  # Используем total_price
             f"🏠 <b>Адрес доставки:</b> {instance.address if instance.address else 'Самовывоз'}\n"
             f"⏰ <b>Время доставки:</b> {instance.delivery_time.strftime('%Y-%m-%d %H:%M') if instance.delivery_time else 'Не указано'}\n"
             f"📦 <b>Товары:</b>\n{items_list}"

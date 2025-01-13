@@ -62,6 +62,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from django.utils import timezone
+
 @login_required
 def checkout(request):
     cart = get_object_or_404(Cart, user=request.user)
@@ -78,15 +80,8 @@ def checkout(request):
         default_name = last_order.name if last_order.name else default_name
         default_phone = last_order.phone if last_order.phone else default_phone
         default_address = last_order.address if last_order.address else default_address
-        default_delivery_time = (timezone.now() + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
+        default_delivery_time = last_order.delivery_time if last_order.delivery_time else default_delivery_time
         default_comment = last_order.comment if last_order.comment else default_comment
-
-    # Убедимся, что default_delivery_time не None
-    if not default_delivery_time:
-        default_delivery_time = (timezone.now() + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
-
-    # Вывод значения default_delivery_time в консоль для отладки
-    print(f"Default delivery time: {default_delivery_time}")
 
     if request.method == 'POST':
         # Получаем данные из формы
