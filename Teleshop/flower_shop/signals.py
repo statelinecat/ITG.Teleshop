@@ -35,54 +35,43 @@ async def send_notification(bot, telegram_id, message, images):
 
 @receiver(post_save, sender=Order)
 def notify_user_and_admins(sender, instance, **kwargs):
-    """
-    Сигнал для отправки уведомлений пользователю и администраторам при создании или изменении статуса заказа.
-    """
     if kwargs.get('created') or instance.tracker.has_changed('status'):
         bot = get_bot()
         header = "🆕 <b>Новый заказ</b>\n" if kwargs.get('created') else "🔄 <b>Изменение статуса заказа</b>\n"
         order_items = instance.items.all()
 
-        # Проверяем, что заказ содержит товары
         if not order_items:
             logger.warning(f"Заказ #{instance.id} не содержит товаров.")
             return
 
-        # Формируем список товаров
         items_list = "\n".join([f"{item.product.name} x {item.quantity}" for item in order_items])
 
-        # Получаем общую стоимость заказа
         total_price = instance.get_total_price()
         if total_price is None or total_price == 0:
             logger.warning(f"Сумма заказа #{instance.id} равна 0 или не определена.")
             return
 
-        # Формируем список URL изображений товаров с использованием BASE_URL
         item_images = [
             f"{settings.BASE_URL}{item.product.image.url}" if item.product.image else None
             for item in order_items
         ]
 
-        # Формируем сообщение с информацией о заказе
         message = (
             f"{header}"
             f"🛒 <b>Заказ #{instance.id}</b>\n"
             f"📊 <b>Статус:</b> {instance.get_status_display()}\n"
-            f"📅 <b>Дата оформления:</b> {instance.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"📅 <b>Дата оформления:</b> {timezone.localtime(instance.created_at).strftime('%Y-%m-%d %H:%M:%S')}\n"
             f"💰 <b>Сумма заказа:</b> {total_price:.2f} руб.\n"
             f"🏠 <b>Адрес доставки:</b> {instance.address if instance.address else 'Самовывоз'}\n"
-            f"⏰ <b>Время доставки:</b> {instance.delivery_time.strftime('%Y-%m-%d %H:%M') if instance.delivery_time else 'Не указано'}\n"
+            f"⏰ <b>Время доставки:</b> {timezone.localtime(instance.delivery_time).strftime('%Y-%m-%d %H:%M') if instance.delivery_time else 'Не указано'}\n"
             f"📦 <b>Товары:</b>\n{items_list}"
         )
 
-        # Добавляем информацию об изменении статуса, если статус изменился
         if instance.tracker.has_changed('status'):
             old_status = instance.tracker.previous('status')
             new_status = instance.status
-            # Используем get_status_display() для перевода старого и нового статуса
             message += f"📅 <b>Статус изменен с:</b> {dict(Order.STATUS_CHOICES).get(old_status, old_status)} на {dict(Order.STATUS_CHOICES).get(new_status, new_status)}\n"
 
-        # Формируем список получателей (пользователь и администраторы)
         recipients = []
         if instance.user.telegram_id:
             recipients.append(instance.user.telegram_id)
@@ -92,7 +81,6 @@ def notify_user_and_admins(sender, instance, **kwargs):
             if admin.telegram_id:
                 recipients.append(admin.telegram_id)
 
-        # Используем asyncio.run для запуска асинхронного кода
         async def send_notifications():
             tasks = [send_notification(bot, recipient, message, item_images) for recipient in recipients]
             await asyncio.gather(*tasks)

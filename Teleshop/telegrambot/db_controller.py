@@ -33,9 +33,6 @@ def set_user_telegram_id(link_code, telegram_id):
 
 @sync_to_async
 def get_user_orders(user_id, is_staff=False, status_filter=None, start_date=None, end_date=None):
-    """
-    Получает заказы пользователя по его ID.
-    """
     try:
         user = User.objects.get(id=user_id)
         if is_staff:
@@ -56,7 +53,6 @@ def get_user_orders(user_id, is_staff=False, status_filter=None, start_date=None
         for order in orders:
             items = order.items.all()
             item_list = ", ".join([f"{item.product.name} x {item.quantity}" for item in items])
-            # Получаем полные URL изображений товаров с использованием BASE_URL
             item_images = [
                 f"{settings.BASE_URL}{item.product.image.url}" if item.product.image else None
                 for item in items
@@ -64,11 +60,11 @@ def get_user_orders(user_id, is_staff=False, status_filter=None, start_date=None
             orders_info.append({
                 "id": order.id,
                 "status": order.status,
-                "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "created_at": timezone.localtime(order.created_at).strftime("%Y-%m-%d %H:%M:%S"),
                 "items": item_list,
                 "total_price": order.get_total_price(),
                 "address": order.address,
-                "delivery_time": order.delivery_time.strftime("%Y-%m-%d %H:%M") if order.delivery_time else "Не указано",
+                "delivery_time": timezone.localtime(order.delivery_time).strftime("%Y-%m-%d %H:%M") if order.delivery_time else "Не указано",
                 "item_images": item_images,
             })
         return orders_info
