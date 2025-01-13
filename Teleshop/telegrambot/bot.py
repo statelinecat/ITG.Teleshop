@@ -79,16 +79,16 @@ def get_start_keyboard():
         resize_keyboard=True
     )
 
-# Инлайн-клавиатура для выбора периода
-def get_period_keyboard():
+# Инлайн-клавиатура для выбора периода (для статуса заказов)
+def get_status_period_keyboard():
     """
-    Возвращает инлайн-клавиатуру для выбора периода.
+    Возвращает инлайн-клавиатуру для выбора периода для статуса заказов.
     """
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="За сегодня", callback_data="period_today")],
-        [InlineKeyboardButton(text="За неделю", callback_data="period_week")],
-        [InlineKeyboardButton(text="За месяц", callback_data="period_month")],
-        [InlineKeyboardButton(text="За все время", callback_data="period_all")]
+        [InlineKeyboardButton(text="За сегодня", callback_data="status_period_today")],
+        [InlineKeyboardButton(text="За неделю", callback_data="status_period_week")],
+        [InlineKeyboardButton(text="За месяц", callback_data="status_period_month")],
+        [InlineKeyboardButton(text="За все время", callback_data="status_period_all")]
     ])
 
 # Инлайн-клавиатура для фильтрации заказов
@@ -102,6 +102,18 @@ def get_order_filter_keyboard():
         [InlineKeyboardButton(text="Только в доставке", callback_data="filter_in_delivery")],
         [InlineKeyboardButton(text="Только в работе", callback_data="filter_in_progress")],
         [InlineKeyboardButton(text="Все, кроме выполненных", callback_data="filter_all_except_completed")]
+    ])
+
+# Инлайн-клавиатура для выбора периода (для отчетов)
+def get_report_period_keyboard():
+    """
+    Возвращает инлайн-клавиатуру для выбора периода для отчетов.
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="За сегодня", callback_data="report_period_today")],
+        [InlineKeyboardButton(text="За неделю", callback_data="report_period_week")],
+        [InlineKeyboardButton(text="За месяц", callback_data="report_period_month")],
+        [InlineKeyboardButton(text="За все время", callback_data="report_period_all")]
     ])
 
 # Обработчик команды /start
@@ -140,13 +152,16 @@ async def handle_start(message: types.Message):
 async def handle_status(message: types.Message):
     """
     Обработчик кнопки "Статус заказов".
-    Показывает статус заказов пользователя или администратора.
+    Для администраторов показывает клавиатуру для выбора периода.
+    Для обычных пользователей показывает их заказы.
     """
     try:
         user = await sync_to_async(User.objects.get)(telegram_id=message.chat.id)
         if user.is_staff:
-            await message.answer("Выберите период для заказов:", reply_markup=get_period_keyboard())
+            # Для администраторов показываем клавиатуру для выбора периода
+            await message.answer("Выберите период для заказов:", reply_markup=get_status_period_keyboard())
         else:
+            # Для обычных пользователей показываем их заказы
             orders = await get_user_orders(user.id, is_staff=False)
             await send_orders(message, orders)
     except ObjectDoesNotExist:
@@ -154,6 +169,149 @@ async def handle_status(message: types.Message):
     except Exception as e:
         logger.error(f"Ошибка при получении заказов: {e}")
         await message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+
+# Обработчик для выбора периода "За сегодня" (для статуса заказов)
+@router.callback_query(lambda callback: callback.data == "status_period_today")
+async def handle_status_period_today(callback: types.CallbackQuery, state: FSMContext):
+    end_date = datetime.now()
+    start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    await handle_status_period(callback, start_date, end_date, state)
+
+# Обработчик для выбора периода "За неделю" (для статуса заказов)
+@router.callback_query(lambda callback: callback.data == "status_period_week")
+async def handle_status_period_week(callback: types.CallbackQuery, state: FSMContext):
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=7)
+    await handle_status_period(callback, start_date, end_date, state)
+
+# Обработчик для выбора периода "За месяц" (для статуса заказов)
+@router.callback_query(lambda callback: callback.data == "status_period_month")
+async def handle_status_period_month(callback: types.CallbackQuery, state: FSMContext):
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=30)
+    await handle_status_period(callback, start_date, end_date, state)
+
+# Обработчик для выбора периода "За все время" (для статуса заказов)
+@router.callback_query(lambda callback: callback.data == "status_period_all")
+async def handle_status_period_all(callback: types.CallbackQuery, state: FSMContext):
+    await handle_status_period(callback, start_date=None, end_date=None, state=state)
+
+# Общий обработчик для выбора периода (для статуса заказов)
+async def handle_status_period(callback: types.CallbackQuery, start_date, end_date, state: FSMContext):
+    """
+    Общий обработчик для выбора периода для статуса заказов.
+    Сохраняет выбранный период и показывает клавиатуру для фильтрации по статусу.
+    """
+    try:
+        user = await sync_to_async(User.objects.get)(telegram_id=callback.message.chat.id)
+        if user.is_staff:
+            # Сохраняем выбранный период в состоянии пользователя
+            await state.update_data(start_date=start_date, end_date=end_date)
+
+            # Показываем клавиатуру для фильтрации по статусу
+            await callback.message.answer(
+                f"Выбран период с {start_date.strftime('%Y-%m-%d') if start_date else 'все время'} по {end_date.strftime('%Y-%m-%d') if end_date else 'все время'}.",
+                reply_markup=get_order_filter_keyboard()
+            )
+        else:
+            await callback.message.answer("Эта функция доступна только администраторам.")
+    except Exception as e:
+        logger.error(f"Ошибка при выборе периода: {e}")
+        await callback.message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+
+# Обработчик для фильтра "Все заказы"
+@router.callback_query(lambda callback: callback.data == "filter_all")
+async def handle_filter_all(callback: types.CallbackQuery, state: FSMContext):
+    await handle_filter(callback, status_filter=None, state=state)
+
+# Обработчик для фильтра "Только выполненные"
+@router.callback_query(lambda callback: callback.data == "filter_completed")
+async def handle_filter_completed(callback: types.CallbackQuery, state: FSMContext):
+    await handle_filter(callback, status_filter="completed", state=state)
+
+# Обработчик для фильтра "Только в доставке"
+@router.callback_query(lambda callback: callback.data == "filter_in_delivery")
+async def handle_filter_in_delivery(callback: types.CallbackQuery, state: FSMContext):
+    await handle_filter(callback, status_filter="in_delivery", state=state)
+
+# Обработчик для фильтра "Только в работе"
+@router.callback_query(lambda callback: callback.data == "filter_in_progress")
+async def handle_filter_in_progress(callback: types.CallbackQuery, state: FSMContext):
+    await handle_filter(callback, status_filter="in_progress", state=state)
+
+# Обработчик для фильтра "Все, кроме выполненных"
+@router.callback_query(lambda callback: callback.data == "filter_all_except_completed")
+async def handle_filter_all_except_completed(callback: types.CallbackQuery, state: FSMContext):
+    await handle_filter(callback, status_filter="all_except_completed", state=state)
+
+# Общий обработчик для фильтрации заказов
+async def handle_filter(callback: types.CallbackQuery, status_filter=None, state: FSMContext = None):
+    """
+    Общий обработчик для фильтрации заказов.
+    Получает заказы за выбранный период и фильтрует их по статусу.
+    """
+    try:
+        user = await sync_to_async(User.objects.get)(telegram_id=callback.message.chat.id)
+        if user.is_staff:
+            # Получаем выбранный период из состояния пользователя
+            data = await state.get_data()
+            start_date = data.get("start_date")
+            end_date = data.get("end_date")
+
+            # Получаем заказы за выбранный период и фильтруем их по статусу
+            orders = await get_user_orders(user.id, is_staff=True, status_filter=status_filter, start_date=start_date, end_date=end_date)
+
+            # Отправляем заказы пользователю
+            await send_orders(callback.message, orders)
+        else:
+            await callback.message.answer("Эта функция доступна только администраторам.")
+    except Exception as e:
+        logger.error(f"Ошибка при фильтрации заказов: {e}")
+        await callback.message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+
+# Функция для отправки заказов
+async def send_orders(message: types.Message, orders):
+    """
+    Отправляет заказы пользователю.
+    """
+    if orders:
+        # Словарь для перевода статусов
+        status_translation = {
+            'accepted': 'Принят к работе',
+            'in_progress': 'Находится в работе',
+            'in_delivery': 'В доставке',
+            'completed': 'Выполнен',
+        }
+
+        for order in orders:
+            # Преобразуем статус заказа
+            status = status_translation.get(order['status'], order['status'])
+            # Проверяем адрес доставки
+            address = order['address'] if order['address'] else "Самовывоз"
+            # Формируем текстовое сообщение с улучшенным форматированием
+            response = (
+                f"🛒 <b>Заказ #{order['id']}</b>\n"
+                f"📊 <b>Статус:</b> {status}\n"
+                f"📅 <b>Дата оформления:</b> {order['created_at']}\n"
+                f"💰 <b>Сумма заказа:</b> {order['total_price']:.2f} руб.\n"
+                f"🏠 <b>Адрес доставки:</b> {address}\n"
+                f"⏰ <b>Время доставки:</b> {order['delivery_time']}\n"
+                f"📦 <b>Товары:</b>\n"
+                f"{order['items'].replace(', ', '\n')}\n"
+            )
+            # Отправляем текстовое сообщение с HTML-разметкой
+            await message.answer(response, parse_mode="HTML")
+
+            # Отправляем изображения товаров
+            for image_url in order['item_images']:
+                if image_url:  # Проверяем, что URL не пустой
+                    try:
+                        await message.answer_photo(image_url)
+                    except Exception as e:
+                        logger.error(f"Ошибка при отправке изображения: {e}")
+                        await message.answer(f"Не удалось загрузить изображение товара: {image_url}")
+    else:
+        await message.answer("Заказов с выбранным фильтром нет.")
 
 # Обработчик кнопки "Отчеты"
 @router.message(lambda message: message.text == "Отчеты")
@@ -165,7 +323,7 @@ async def handle_reports(message: types.Message):
     try:
         user = await sync_to_async(User.objects.get)(telegram_id=message.chat.id)
         if user.is_staff:
-            await message.answer("Выберите период для отчета:", reply_markup=get_period_keyboard())
+            await message.answer("Выберите период для отчета:", reply_markup=get_report_period_keyboard())
         else:
             await message.answer("Эта функция доступна только администраторам.")
     except ObjectDoesNotExist:
@@ -174,30 +332,30 @@ async def handle_reports(message: types.Message):
         logger.error(f"Ошибка при обработке запроса отчетов: {e}")
         await message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
 
-# Обработчик для выбора периода "За сегодня"
-@router.callback_query(lambda callback: callback.data == "period_today")
-async def handle_period_today(callback: types.CallbackQuery, state: FSMContext):
+# Обработчик для выбора периода "За сегодня" (для отчетов)
+@router.callback_query(lambda callback: callback.data == "report_period_today")
+async def handle_report_period_today(callback: types.CallbackQuery):
     end_date = datetime.now()
     start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
     await handle_report(callback, start_date, end_date)
 
-# Обработчик для выбора периода "За неделю"
-@router.callback_query(lambda callback: callback.data == "period_week")
-async def handle_period_week(callback: types.CallbackQuery, state: FSMContext):
+# Обработчик для выбора периода "За неделю" (для отчетов)
+@router.callback_query(lambda callback: callback.data == "report_period_week")
+async def handle_report_period_week(callback: types.CallbackQuery):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=7)
     await handle_report(callback, start_date, end_date)
 
-# Обработчик для выбора периода "За месяц"
-@router.callback_query(lambda callback: callback.data == "period_month")
-async def handle_period_month(callback: types.CallbackQuery, state: FSMContext):
+# Обработчик для выбора периода "За месяц" (для отчетов)
+@router.callback_query(lambda callback: callback.data == "report_period_month")
+async def handle_report_period_month(callback: types.CallbackQuery):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=30)
     await handle_report(callback, start_date, end_date)
 
-# Обработчик для выбора периода "За все время"
-@router.callback_query(lambda callback: callback.data == "period_all")
-async def handle_period_all(callback: types.CallbackQuery, state: FSMContext):
+# Обработчик для выбора периода "За все время" (для отчетов)
+@router.callback_query(lambda callback: callback.data == "report_period_all")
+async def handle_report_period_all(callback: types.CallbackQuery):
     await handle_report(callback, start_date=None, end_date=None)
 
 # Общий обработчик для формирования отчета
