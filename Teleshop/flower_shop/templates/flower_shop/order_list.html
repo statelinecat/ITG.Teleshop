@@ -73,8 +73,8 @@
                         <form method="post" action="{% url 'change_order_status' order.id %}">
                             {% csrf_token %}
                             <!-- Скрытые поля для передачи параметров фильтрации -->
-                            <input type="hidden" name="start_date" value="{{ request.GET.start_date }}">
-                            <input type="hidden" name="end_date" value="{{ request.GET.end_date }}">
+                            <input type="hidden" name="start_date" value="{{ request.GET.start_date|default_if_none:'' }}">
+                            <input type="hidden" name="end_date" value="{{ request.GET.end_date|default_if_none:'' }}">
                             {% for status in selected_statuses %}
                                 <input type="hidden" name="filter_status" value="{{ status }}">
                             {% endfor %}

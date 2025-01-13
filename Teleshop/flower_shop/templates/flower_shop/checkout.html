@@ -45,9 +45,8 @@
                 <!-- Поле для времени доставки -->
                 <div class="form-group mb-3">
                     <label for="delivery_time">Время доставки:</label>
-                    <input type="datetime-local" id="delivery_time" name="delivery_time" class="form-control" value="{{ default_delivery_time }}" required>
+                    <input type="datetime-local" id="delivery_time" name="delivery_time" class="form-control" value="{{ default_delivery_time|date:'Y-m-d\TH:i' }}" required>
                 </div>
-
                 <!-- Поле для комментария -->
                 <div class="form-group mb-3">
                     <label for="comment">Комментарий:</label>

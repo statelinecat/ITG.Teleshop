@@ -5,8 +5,12 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db.models import F, ExpressionWrapper, DecimalField
+from django.db.models.functions import Coalesce
+from model_utils import FieldTracker  # Для отслеживания изменений полей
 import random
 import string
+
 
 class User(AbstractUser):
     """
@@ -48,6 +52,7 @@ class User(AbstractUser):
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
+
 class Category(models.Model):
     """
     Модель категории товаров.
@@ -72,6 +77,7 @@ class Category(models.Model):
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
 
+
 class Product(models.Model):
     """
     Модель товара.
@@ -94,6 +100,7 @@ class Product(models.Model):
     class Meta:
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
+
 
 class Cart(models.Model):
     """
@@ -121,6 +128,7 @@ class Cart(models.Model):
         verbose_name = "Корзина"
         verbose_name_plural = "Корзины"
 
+
 class CartItem(models.Model):
     """
     Модель элемента корзины.
@@ -137,10 +145,8 @@ class CartItem(models.Model):
         verbose_name_plural = "Элементы корзины"
         unique_together = ('cart', 'product')  # Уникальная пара cart и product
 
+
 class Order(models.Model):
-    """
-    Модель заказа.
-    """
     STATUS_CHOICES = [
         ('accepted', 'Принят к работе'),
         ('in_progress', 'Находится в работе'),
@@ -151,13 +157,17 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='accepted', verbose_name="Статус заказа")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    status_changed = models.DateTimeField(default=timezone.now, verbose_name="Дата изменения статуса")
 
     # Поля для данных заказа
     name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Имя")
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес доставки")
-    delivery_time = models.DateTimeField(blank=True, null=True, verbose_name="Время доставки")
+    delivery_time = models.DateTimeField(blank=True, null=True, verbose_name="Время доставки")  # Допускает NULL
     comment = models.TextField(blank=True, null=True, verbose_name="Комментарий")
+
+    # Трекер для отслеживания изменений статуса
+    tracker = FieldTracker(fields=['status'])
 
     def __str__(self):
         return f"Заказ {self.id} от {self.user.username} (Статус: {self.get_status_display()})"
@@ -171,6 +181,7 @@ class Order(models.Model):
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
+
 
 class OrderItem(models.Model):
     """
@@ -187,6 +198,7 @@ class OrderItem(models.Model):
         verbose_name = "Элемент заказа"
         verbose_name_plural = "Элементы заказа"
         unique_together = ('order', 'product')  # Уникальная пара order и product
+
 
 class Review(models.Model):
     """
@@ -209,17 +221,20 @@ class Review(models.Model):
         verbose_name = "Отзыв"
         verbose_name_plural = "Отзывы"
 
+
 def default_period_start():
     """
     Возвращает текущую дату для начала периода по умолчанию.
     """
     return timezone.now().date()
 
+
 def default_period_end():
     """
     Возвращает текущую дату для конца периода по умолчанию.
     """
     return timezone.now().date()
+
 
 class Report(models.Model):
     """
@@ -249,6 +264,7 @@ class Report(models.Model):
     class Meta:
         verbose_name = "Отчет"
         verbose_name_plural = "Отчеты"
+
 
 @receiver(post_save, sender=User)
 def create_user_cart(sender, instance, created, **kwargs):

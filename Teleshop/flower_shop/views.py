@@ -58,9 +58,12 @@ def remove_from_cart(request, item_id):
     cart_item.delete()
     return redirect('cart_detail')
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @login_required
 def checkout(request):
-    """Оформление заказа."""
     cart = get_object_or_404(Cart, user=request.user)
     last_order = Order.objects.filter(user=request.user).order_by('-created_at').first()
 
@@ -75,23 +78,53 @@ def checkout(request):
         default_name = last_order.name if last_order.name else default_name
         default_phone = last_order.phone if last_order.phone else default_phone
         default_address = last_order.address if last_order.address else default_address
-        default_delivery_time = last_order.delivery_time.strftime(
-            '%Y-%m-%dT%H:%M') if last_order.delivery_time else default_delivery_time.strftime('%Y-%m-%dT%H:%M')
+        default_delivery_time = last_order.delivery_time if last_order.delivery_time else default_delivery_time
         default_comment = last_order.comment if last_order.comment else default_comment
 
+    # Добавьте проверку здесь
+    if not default_delivery_time:
+        default_delivery_time = (timezone.now() + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
+
+    # Вывод значения default_delivery_time в консоль для отладки
+    print(f"Default delivery time: {default_delivery_time}")
+
     if request.method == 'POST':
+        # Получаем данные из формы
+        name = request.POST.get('name', default_name)
+        phone = request.POST.get('phone', default_phone)
+        address = request.POST.get('address', default_address)
+        delivery_time = request.POST.get('delivery_time')
+        comment = request.POST.get('comment', default_comment)
+
+        # Преобразуем delivery_time в datetime, если оно передано
+        if delivery_time:
+            try:
+                delivery_time = timezone.datetime.fromisoformat(delivery_time)
+            except (ValueError, TypeError):
+                # Если формат неправильный, используем значение по умолчанию
+                delivery_time = default_delivery_time
+        else:
+            # Если delivery_time не передано, используем значение по умолчанию
+            delivery_time = default_delivery_time
+
+        # Создаем заказ
         order = Order.objects.create(
             user=request.user,
             status='accepted',
-            name=request.POST.get('name'),
-            phone=request.POST.get('phone'),
-            address=request.POST.get('address'),
-            delivery_time=request.POST.get('delivery_time'),
-            comment=request.POST.get('comment')
+            name=name,
+            phone=phone,
+            address=address,
+            delivery_time=delivery_time,
+            comment=comment
         )
+
+        # Добавляем товары из корзины в заказ
         for item in cart.items.all():
             OrderItem.objects.create(order=order, product=item.product, quantity=item.quantity)
+
+        # Очищаем корзину
         cart.items.all().delete()
+
         messages.success(request, 'Заказ успешно оформлен!')
         return redirect('order_list')
 
@@ -100,14 +133,13 @@ def checkout(request):
         'default_name': default_name,
         'default_phone': default_phone,
         'default_address': default_address,
-        'default_delivery_time': default_delivery_time,
+        'default_delivery_time': default_delivery_time.strftime('%Y-%m-%dT%H:%M') if default_delivery_time else '',
         'default_comment': default_comment,
-        'telegram_id_attached': bool(request.user.telegram_id),  # Проверка привязки Telegram ID
+        'telegram_id_attached': bool(request.user.telegram_id),
     })
 
 @login_required
 def order_list(request):
-    """Список заказов пользователя или администратора."""
     selected_statuses = request.GET.getlist('status')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -120,10 +152,16 @@ def order_list(request):
         if not end_date:
             end_date = today_local
 
-        if isinstance(start_date, str):
-            start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
-        if isinstance(end_date, str):
-            end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+        # Преобразуем start_date и end_date в объекты date, если они переданы
+        try:
+            if isinstance(start_date, str):
+                start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+            if isinstance(end_date, str):
+                end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            # Если формат неправильный, используем текущую дату
+            start_date = today_local
+            end_date = today_local
 
         start_datetime_utc = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
         end_datetime_utc = timezone.make_aware(
