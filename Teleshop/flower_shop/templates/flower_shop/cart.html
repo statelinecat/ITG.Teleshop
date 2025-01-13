@@ -49,7 +49,11 @@
 
                 <!-- Блок с кнопкой "Оформить заказ" -->
                 {% if is_working_time %}
-                    <a href="{% url 'checkout' %}" class="btn btn-success">Оформить заказ</a>
+                    <form method="post" action="{% url 'checkout' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="from_cart" value="true">
+                        <button type="submit" class="btn btn-success">Оформить заказ</button>
+                    </form>
                 {% else %}
                     <!-- Сообщение о нерабочем времени -->
                     <div class="alert alert-warning" role="alert">

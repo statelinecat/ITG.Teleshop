@@ -10,6 +10,24 @@ from django.db.models.functions import Coalesce
 from model_utils import FieldTracker  # Для отслеживания изменений полей
 import random
 import string
+import logging
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.utils.text import slugify
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.db.models import F, ExpressionWrapper, DecimalField
+from django.db.models.functions import Coalesce
+from model_utils import FieldTracker  # Для отслеживания изменений полей
+import random
+import string
+
+# Создаем логгер
+logger = logging.getLogger(__name__)
+
+# Остальной код моделей...
 
 
 class User(AbstractUser):
@@ -148,6 +166,7 @@ class CartItem(models.Model):
 
 class Order(models.Model):
     STATUS_CHOICES = [
+        ('new', 'Новый'),
         ('accepted', 'Принят к работе'),
         ('in_progress', 'Находится в работе'),
         ('in_delivery', 'В доставке'),
@@ -175,7 +194,10 @@ class Order(models.Model):
         """
         Возвращает общую стоимость заказа.
         """
-        return sum(item.product.price * item.quantity for item in self.items.all()) if self.items.exists() else 0
+        total = sum(item.product.price * item.quantity for item in self.items.all()) if self.items.exists() else 0
+        logger.info(
+            f"Сумма заказа #{self.id}: {total} руб. (Товары: {[item.product.name for item in self.items.all()]})")
+        return total
 
     class Meta:
         verbose_name = "Заказ"

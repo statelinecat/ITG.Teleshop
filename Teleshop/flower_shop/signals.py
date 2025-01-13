@@ -1,61 +1,58 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Order, User
-from aiogram import Bot
-import asyncio
 import logging
 from django.utils import timezone
-from django.conf import settings  # Импортируем settings
+from django.conf import settings
+import requests
+from telegrambot.db_controller import send_telegram_webhook  # Импортируем функцию для отправки вебхуков
 
 logger = logging.getLogger(__name__)
 
-
-# Ленивая инициализация бота
-def get_bot():
-    if not hasattr(get_bot, "bot"):
-        get_bot.bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-    return get_bot.bot
-
-
-async def send_notification(bot, telegram_id, message, images):
-    """
-    Асинхронная функция для отправки уведомления пользователю.
-    """
-    try:
-        await bot.send_message(telegram_id, message, parse_mode="HTML")
-        for image_url in images:
-            if image_url:
-                try:
-                    await bot.send_photo(telegram_id, image_url)
-                except Exception as e:
-                    logger.error(f"Ошибка при отправке изображения: {e}")
-    except Exception as e:
-        logger.error(f"Ошибка при отправке уведомления: {e}")
-
-
 @receiver(post_save, sender=Order)
 def notify_user_and_admins(sender, instance, **kwargs):
-    if kwargs.get('created') or instance.tracker.has_changed('status'):
-        bot = get_bot()
-        header = "🆕 <b>Новый заказ</b>\n" if kwargs.get('created') else "🔄 <b>Изменение статуса заказа</b>\n"
+    """
+    Сигнал для отправки уведомлений пользователю и администраторам при изменении статуса заказа.
+    """
+    # Отправляем уведомления только при изменении статуса
+    if instance.tracker.has_changed('status'):
+        old_status = instance.tracker.previous('status')
+        new_status = instance.status
+
+        # Определяем заголовок в зависимости от изменения статуса
+        if old_status == 'new' and new_status == 'accepted':
+            header = "🆕 <b>Новый заказ</b>\n"
+        else:
+            header = "🔄 <b>Изменение статуса заказа</b>\n"
+
         order_items = instance.items.all()
 
+        # Проверяем, что заказ содержит товары
         if not order_items:
             logger.warning(f"Заказ #{instance.id} не содержит товаров.")
             return
+        else:
+            logger.info(f"Заказ #{instance.id} содержит товары: {[item.product.name for item in order_items]}")
 
+        # Формируем список товаров
         items_list = "\n".join([f"{item.product.name} x {item.quantity}" for item in order_items])
 
+        # Получаем общую стоимость заказа
         total_price = instance.get_total_price()
+
+        # Логируем сумму заказа для отладки
+        logger.info(f"Сумма заказа #{instance.id}: {total_price} руб.")
         if total_price is None or total_price == 0:
             logger.warning(f"Сумма заказа #{instance.id} равна 0 или не определена.")
             return
 
+        # Формируем список URL изображений товаров с использованием BASE_URL
         item_images = [
             f"{settings.BASE_URL}{item.product.image.url}" if item.product.image else None
             for item in order_items
         ]
 
+        # Формируем сообщение с информацией о заказе
         message = (
             f"{header}"
             f"🛒 <b>Заказ #{instance.id}</b>\n"
@@ -67,11 +64,11 @@ def notify_user_and_admins(sender, instance, **kwargs):
             f"📦 <b>Товары:</b>\n{items_list}"
         )
 
-        if instance.tracker.has_changed('status'):
-            old_status = instance.tracker.previous('status')
-            new_status = instance.status
-            message += f"📅 <b>Статус изменен с:</b> {dict(Order.STATUS_CHOICES).get(old_status, old_status)} на {dict(Order.STATUS_CHOICES).get(new_status, new_status)}\n"
+        # Добавляем информацию об изменении статуса, если статус изменился
+        if old_status != new_status:
+            message += f"\n📅 <b>Статус изменен:</b> с {dict(Order.STATUS_CHOICES).get(old_status, old_status)} на {dict(Order.STATUS_CHOICES).get(new_status, new_status)}\n"
 
+        # Формируем список получателей (пользователь и администраторы)
         recipients = []
         if instance.user.telegram_id:
             recipients.append(instance.user.telegram_id)
@@ -81,11 +78,6 @@ def notify_user_and_admins(sender, instance, **kwargs):
             if admin.telegram_id:
                 recipients.append(admin.telegram_id)
 
-        async def send_notifications():
-            tasks = [send_notification(bot, recipient, message, item_images) for recipient in recipients]
-            await asyncio.gather(*tasks)
-
-        try:
-            asyncio.run(send_notifications())
-        except RuntimeError as e:
-            logger.error(f"Ошибка при запуске асинхронного кода: {e}")
+        # Отправляем уведомления через вебхуки
+        for recipient in recipients:
+            send_telegram_webhook(recipient, message, item_images)

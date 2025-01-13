@@ -3,14 +3,49 @@ from django.core.exceptions import ObjectDoesNotExist
 from flower_shop.models import User, Order
 from asgiref.sync import sync_to_async
 import os
-import django
-from django.conf import settings  # Импортируем settings
+from django.conf import settings
+import requests
+from django.utils import timezone
+
+# Создаем логгер
+logger = logging.getLogger(__name__)
+
+def send_telegram_webhook(telegram_id, message, images=None):
+    """
+    Отправляет уведомление в Telegram через вебхук.
+    """
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    data = {
+        "chat_id": telegram_id,
+        "text": message,
+        "parse_mode": "HTML",
+    }
+
+    # Логируем сообщение перед отправкой
+    logger.info(f"Отправка сообщения в Telegram: {message}")
+
+    try:
+        response = requests.post(url, data=data)
+        if response.status_code != 200:
+            logger.error(f"Ошибка при отправке сообщения: {response.text}")
+
+        # Отправка изображений, если они есть
+        if images:
+            for image_url in images:
+                if image_url:
+                    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendPhoto"
+                    data = {
+                        "chat_id": telegram_id,
+                        "photo": image_url,
+                    }
+                    response = requests.post(url, data=data)
+                    if response.status_code != 200:
+                        logger.error(f"Ошибка при отправке изображения: {response.text}")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке вебхука: {e}")
 
 # Настройка Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Teleshop.settings')
-django.setup()
-
-logger = logging.getLogger(__name__)
 
 @sync_to_async
 def set_user_telegram_id(link_code, telegram_id):
@@ -67,6 +102,10 @@ def get_user_orders(user_id, is_staff=False, status_filter=None, start_date=None
                 "delivery_time": timezone.localtime(order.delivery_time).strftime("%Y-%m-%d %H:%M") if order.delivery_time else "Не указано",
                 "item_images": item_images,
             })
+
+        # Логируем полученные заказы
+        logger.info(f"Получены заказы для пользователя {user_id}: {orders_info}")
+
         return orders_info
     except ObjectDoesNotExist:
         logger.warning(f"Пользователь с ID {user_id} не найден.")
