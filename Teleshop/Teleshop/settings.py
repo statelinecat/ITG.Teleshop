@@ -108,11 +108,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'ru-ru'  # Устанавливаем русский язык
+USE_TZ = True
 TIME_ZONE = 'Europe/Moscow'  # Устанавливаем московское время
 USE_I18N = True  # Включаем поддержку интернационализации
 USE_L10N = True  # Включаем локализацию
 
-USE_TZ = True
+
 
 
 # Static files (CSS, JavaScript, Images)
@@ -175,3 +176,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',  # Разрешить доступ по IP
     '1ad0-185-21-13-3.ngrok-free.app',  # Разрешить доступ через ngrok
 ]
+
+# settings.py
+BASE_URL = 'https://1ad0-185-21-13-3.ngrok-free.app'  # Для локального окружения (ngrok)
+# BASE_URL = 'https://ваш-домен.com'  # Для продакшн-окружения

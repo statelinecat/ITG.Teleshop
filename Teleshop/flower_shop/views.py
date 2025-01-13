@@ -1,20 +1,19 @@
 import csv
 import logging
+from datetime import datetime, timedelta
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Sum, Count
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from datetime import datetime, timedelta
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import urlencode
-from django.views.decorators.http import require_http_methods
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.styles import Font, Alignment
 
 from .forms import CustomLoginForm, CustomRegistrationForm
 from .models import User, Category, Product, Cart, CartItem, Order, OrderItem, Review, Report
@@ -58,29 +57,24 @@ def remove_from_cart(request, item_id):
     cart_item.delete()
     return redirect('cart_detail')
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-from django.utils import timezone
-
 @login_required
 def checkout(request):
+    """Оформление заказа."""
     cart = get_object_or_404(Cart, user=request.user)
     last_order = Order.objects.filter(user=request.user).order_by('-created_at').first()
 
     # Значения по умолчанию
     default_name = request.user.username
-    default_phone = "+79991237567"
-    default_address = "Самовывоз"
+    default_phone = "+79991237567"  # Пример номера телефона
+    default_address = "Самовывоз"  # Пример адреса
+    default_comment = "Я люблю Лепесток"  # Пример комментария
     default_delivery_time = (timezone.now() + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
-    default_comment = "Я люблю Лепесток"
 
+    # Если есть последний заказ, используем его данные
     if last_order:
         default_name = last_order.name if last_order.name else default_name
         default_phone = last_order.phone if last_order.phone else default_phone
         default_address = last_order.address if last_order.address else default_address
-        default_delivery_time = last_order.delivery_time if last_order.delivery_time else default_delivery_time
         default_comment = last_order.comment if last_order.comment else default_comment
 
     if request.method == 'POST':
@@ -91,15 +85,14 @@ def checkout(request):
         delivery_time = request.POST.get('delivery_time')
         comment = request.POST.get('comment', default_comment)
 
-        # Преобразуем delivery_time в datetime, если оно передано
+        # Преобразуем delivery_time в datetime
         if delivery_time:
             try:
-                delivery_time = timezone.datetime.fromisoformat(delivery_time)
+                naive_delivery_time = timezone.datetime.fromisoformat(delivery_time)
+                delivery_time = timezone.make_aware(naive_delivery_time, timezone.get_current_timezone())
             except (ValueError, TypeError):
-                # Если формат неправильный, используем значение по умолчанию
                 delivery_time = default_delivery_time
         else:
-            # Если delivery_time не передано, используем значение по умолчанию
             delivery_time = default_delivery_time
 
         # Создаем заказ
@@ -128,18 +121,19 @@ def checkout(request):
         'default_name': default_name,
         'default_phone': default_phone,
         'default_address': default_address,
-        'default_delivery_time': default_delivery_time.strftime('%Y-%m-%dT%H:%M') if default_delivery_time else '',
+        'default_delivery_time': default_delivery_time.strftime('%Y-%m-%dT%H:%M'),
         'default_comment': default_comment,
         'telegram_id_attached': bool(request.user.telegram_id),
     })
 
 @login_required
 def order_list(request):
+    """Список заказов с фильтрацией по статусам и датам."""
     selected_statuses = request.GET.getlist('status')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    # Для обычных пользователей не применяем фильтрацию по датам и статусам
+    # Для администраторов применяем фильтрацию по датам и статусам
     if request.user.is_staff:
         today_local = timezone.localtime(timezone.now()).date()
         if not start_date:
@@ -147,22 +141,20 @@ def order_list(request):
         if not end_date:
             end_date = today_local
 
-        # Преобразуем start_date и end_date в объекты date, если они переданы
+        # Преобразуем start_date и end_date в объекты date
         try:
             if isinstance(start_date, str):
                 start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
             if isinstance(end_date, str):
                 end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            # Если формат неправильный, используем текущую дату
             start_date = today_local
             end_date = today_local
 
         start_datetime_utc = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
-        end_datetime_utc = timezone.make_aware(
-            timezone.datetime.combine(end_date + timedelta(days=1), timezone.datetime.min.time()))
+        end_datetime_utc = timezone.make_aware(timezone.datetime.combine(end_date, timezone.datetime.max.time()))
     else:
-        # Для обычных пользователей не применяем фильтрацию по датам и статусам
+        # Для обычных пользователей не применяем фильтрацию
         start_datetime_utc = None
         end_datetime_utc = None
         selected_statuses = []
@@ -172,13 +164,11 @@ def order_list(request):
     else:
         orders = Order.objects.filter(user=request.user).prefetch_related('items__product')
 
-    # Фильтрация по статусам только для администраторов
+    # Фильтрация по статусам и датам
     if request.user.is_staff and selected_statuses:
         orders = orders.filter(status__in=selected_statuses)
-
-    # Фильтрация по датам только для администраторов
     if request.user.is_staff and start_datetime_utc and end_datetime_utc:
-        orders = orders.filter(created_at__gte=start_datetime_utc, created_at__lt=end_datetime_utc)
+        orders = orders.filter(created_at__gte=start_datetime_utc, created_at__lte=end_datetime_utc)
 
     # Сортировка заказов по дате создания (сначала новые)
     orders = orders.order_by('-created_at')
@@ -436,23 +426,14 @@ def generate_link_code(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 def auth_with_telegram_id(request):
-    """
-    Авторизация пользователя по Telegram ID.
-    Если Telegram ID не привязан, перенаправляет на главную страницу.
-    """
+    """Авторизация пользователя по Telegram ID."""
     telegram_id = request.GET.get('telegram_id')
-
-    # Если Telegram ID не передан, перенаправляем на главную страницу
     if not telegram_id:
         return redirect('index')
 
-    # Пытаемся найти пользователя по Telegram ID
     try:
         user = User.objects.get(telegram_id=telegram_id)
-        # Авторизуем пользователя с указанием бэкенда
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-        # Перенаправляем на главную страницу
         return redirect('index')
     except User.DoesNotExist:
-        # Если пользователь не найден, перенаправляем на главную страницу без авторизации
         return redirect('index')
