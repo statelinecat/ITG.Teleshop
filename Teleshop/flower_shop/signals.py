@@ -5,6 +5,7 @@ from django.conf import settings
 from aiogram import Bot
 import asyncio
 import logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +45,16 @@ def notify_user_and_admins(sender, instance, **kwargs):
             f"🛒 <b>Заказ #{instance.id}</b>\n"
             f"📊 <b>Статус:</b> {instance.get_status_display()}\n"
             f"📅 <b>Дата оформления:</b> {instance.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
-            f"📅 <b>Дата изменения статуса:</b> {instance.status_changed.strftime('%Y-%m-%d %H:%M:%S')}\n"
             f"💰 <b>Сумма заказа:</b> {total_price:.2f} руб.\n"
             f"🏠 <b>Адрес доставки:</b> {instance.address if instance.address else 'Самовывоз'}\n"
             f"⏰ <b>Время доставки:</b> {instance.delivery_time.strftime('%Y-%m-%d %H:%M') if instance.delivery_time else 'Не указано'}\n"
             f"📦 <b>Товары:</b>\n{items_list}"
         )
+
+        if instance.tracker.has_changed('status'):
+            old_status = instance.tracker.previous('status')
+            new_status = instance.status
+            message += f"📅 <b>Статус изменен с:</b> {old_status} на {new_status}\n"
 
         recipients = []
         if instance.user.telegram_id:
@@ -60,7 +65,16 @@ def notify_user_and_admins(sender, instance, **kwargs):
             if admin.telegram_id:
                 recipients.append(admin.telegram_id)
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Создаем новый event loop, если его нет
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError as e:
+            if str(e).startswith("There is no current event loop in thread"):
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            else:
+                raise
+
+        # Используем event loop для выполнения асинхронных задач
         tasks = [send_notification(bot, recipient, message, item_images) for recipient in recipients]
         loop.run_until_complete(asyncio.gather(*tasks))

@@ -157,16 +157,15 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='accepted', verbose_name="Статус заказа")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    status_changed = models.DateTimeField(default=timezone.now, verbose_name="Дата изменения статуса")
 
     # Поля для данных заказа
     name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Имя")
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес доставки")
-    delivery_time = models.DateTimeField(blank=True, null=True, verbose_name="Время доставки")  # Допускает NULL
+    delivery_time = models.DateTimeField(blank=True, null=True, verbose_name="Время доставки")
     comment = models.TextField(blank=True, null=True, verbose_name="Комментарий")
 
-    # Трекер для отслеживания изменений статуса
+    # Добавляем FieldTracker для отслеживания изменений статуса
     tracker = FieldTracker(fields=['status'])
 
     def __str__(self):
