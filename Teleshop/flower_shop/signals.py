@@ -9,11 +9,13 @@ from django.conf import settings  # Импортируем settings
 
 logger = logging.getLogger(__name__)
 
+
 # Ленивая инициализация бота
 def get_bot():
     if not hasattr(get_bot, "bot"):
         get_bot.bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
     return get_bot.bot
+
 
 async def send_notification(bot, telegram_id, message, images):
     """
@@ -30,6 +32,7 @@ async def send_notification(bot, telegram_id, message, images):
     except Exception as e:
         logger.error(f"Ошибка при отправке уведомления: {e}")
 
+
 @receiver(post_save, sender=Order)
 def notify_user_and_admins(sender, instance, **kwargs):
     """
@@ -39,8 +42,20 @@ def notify_user_and_admins(sender, instance, **kwargs):
         bot = get_bot()
         header = "🆕 <b>Новый заказ</b>\n" if kwargs.get('created') else "🔄 <b>Изменение статуса заказа</b>\n"
         order_items = instance.items.all()
+
+        # Проверяем, что заказ содержит товары
+        if not order_items:
+            logger.warning(f"Заказ #{instance.id} не содержит товаров.")
+            return
+
+        # Формируем список товаров
         items_list = "\n".join([f"{item.product.name} x {item.quantity}" for item in order_items])
-        total_price = instance.get_total_price()  # Получаем общую стоимость заказа
+
+        # Получаем общую стоимость заказа
+        total_price = instance.get_total_price()
+        if total_price is None or total_price == 0:
+            logger.warning(f"Сумма заказа #{instance.id} равна 0 или не определена.")
+            return
 
         # Формируем список URL изображений товаров с использованием BASE_URL
         item_images = [
@@ -64,7 +79,8 @@ def notify_user_and_admins(sender, instance, **kwargs):
         if instance.tracker.has_changed('status'):
             old_status = instance.tracker.previous('status')
             new_status = instance.status
-            message += f"📅 <b>Статус изменен с:</b> {old_status} на {new_status}\n"
+            # Используем get_status_display() для перевода старого и нового статуса
+            message += f"📅 <b>Статус изменен с:</b> {dict(Order.STATUS_CHOICES).get(old_status, old_status)} на {dict(Order.STATUS_CHOICES).get(new_status, new_status)}\n"
 
         # Формируем список получателей (пользователь и администраторы)
         recipients = []
