@@ -180,3 +180,5 @@ ALLOWED_HOSTS = [
 # settings.py
 BASE_URL = 'https://1ad0-185-21-13-3.ngrok-free.app'  # Для локального окружения (ngrok)
 # BASE_URL = 'https://ваш-домен.com'  # Для продакшн-окружения
+
+YAADMIN_SECRET_CODE = "123"

@@ -116,6 +116,71 @@ def get_report_period_keyboard():
         [InlineKeyboardButton(text="За все время", callback_data="report_period_all")]
     ])
 
+from aiogram import types
+from aiogram.filters import Command
+from flower_shop.models import User
+from django.conf import settings
+
+# Обработчик команды /yaadmin
+@router.message(Command("yaadmin"))
+async def handle_yaadmin(message: types.Message):
+    """
+    Обработчик команды /yaadmin.
+    Делает пользователя администратором, если он отправил правильный секретный код.
+    """
+    try:
+        # Получаем пользователя из базы данных
+        user = await sync_to_async(User.objects.get)(telegram_id=message.chat.id)
+
+        # Проверяем, что пользователь отправил правильный секретный код
+        if message.text.strip() == f"/yaadmin {settings.YAADMIN_SECRET_CODE}":
+            # Делаем пользователя администратором
+            user.is_staff = True
+            await sync_to_async(user.save)()
+
+            await message.answer(
+                "Поздравляем! Теперь вы администратор.",
+                reply_markup=get_main_keyboard(is_staff=True)
+            )
+        else:
+            await message.answer("Неверный код. Попробуйте еще раз.")
+    except ObjectDoesNotExist:
+        await message.answer("Ваш аккаунт не привязан. Введите код для привязки.")
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении команды /yaadmin: {e}")
+        await message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+
+
+# Обработчик команды /yaneadmin
+@router.message(Command("yaneadmin"))
+async def handle_yaneadmin(message: types.Message):
+    """
+    Обработчик команды /yaneadmin.
+    Делает администратора обычным пользователем.
+    """
+    try:
+        # Получаем пользователя из базы данных
+        user = await sync_to_async(User.objects.get)(telegram_id=message.chat.id)
+
+        # Проверяем, что пользователь является администратором
+        if user.is_staff:
+            # Снимаем права администратора
+            user.is_staff = False
+            await sync_to_async(user.save)()
+
+            await message.answer(
+                "Теперь вы обычный пользователь.",
+                reply_markup=get_main_keyboard(is_staff=False)
+            )
+        else:
+            await message.answer("Вы не являетесь администратором.")
+    except ObjectDoesNotExist:
+        await message.answer("Ваш аккаунт не привязан. Введите код для привязки.")
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении команды /yaneadmin: {e}")
+        await message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+
+
 # Обработчик команды /start
 @router.message(Command("start"))
 async def send_welcome(message: types.Message):

@@ -38,6 +38,7 @@ class User(AbstractUser):
     address = models.TextField(blank=True, null=True, verbose_name="Адрес")
     telegram_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Telegram ID", db_index=True)
     link_code = models.CharField(max_length=8, blank=True, null=True, verbose_name="Код привязки")
+    admin_secret_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="Секретный код администратора")
 
     # Уникальные related_name для groups и user_permissions
     groups = models.ManyToManyField(
@@ -65,6 +66,16 @@ class User(AbstractUser):
             self.link_code = code
             self.save()
         return self.link_code
+
+    def make_admin(self, secret_code):
+        """
+        Делает пользователя администратором, если секретный код верный.
+        """
+        if secret_code == settings.YAADMIN_SECRET_CODE:
+            self.is_staff = True
+            self.save()
+            return True
+        return False
 
     class Meta:
         verbose_name = "Пользователь"
