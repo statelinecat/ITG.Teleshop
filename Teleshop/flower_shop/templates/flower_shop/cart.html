@@ -2,7 +2,7 @@
 {% load custom_filters %}
 
 {% block title %}
-    <title>Лепесток - корзина</title>
+    <title>Лепесток - Корзина</title>
 {% endblock %}
 
 {% block content %}
@@ -15,31 +15,52 @@
                 <ul class="list-group mb-3">
                     {% for item in cart.items.all %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <!-- Блок с изображением и информацией о товаре -->
                             <div class="d-flex align-items-center">
                                 <!-- Изображение товара -->
-                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="img-thumbnail" style="width: 50px; height: 50px; margin-right: 10px;">
+                                <img src="{{ item.product.image.url }}"
+                                     alt="{{ item.product.name }}"
+                                     class="img-thumbnail"
+                                     style="width: 50px; height: 50px; margin-right: 10px;">
+
+                                <!-- Информация о товаре -->
                                 <div>
-                                    <!-- Название товара -->
-                                    <span>{{ item.product.name }}</span><br>
-                                    <!-- Цена товара -->
-                                    <span>Цена: {{ item.product.price }} руб.</span><br>
-                                    <!-- Количество товара -->
-                                    <span>Количество: {{ item.quantity }}</span><br>
-                                    <!-- Общая стоимость товара -->
-                                    <span>Общая стоимость: {{ item.quantity|mul:item.product.price|floatformat:2 }} руб.</span>
+                                    <span class="d-block">{{ item.product.name }}</span>
+                                    <span class="text-muted">Цена: {{ item.product.price }} руб.</span><br>
+                                    <span class="text-muted">Количество: {{ item.quantity }}</span><br>
+                                    <span class="text-muted">Общая стоимость: {{ item.quantity|mul:item.product.price|floatformat:2 }} руб.</span>
                                 </div>
                             </div>
-                            <!-- Форма для изменения количества товара -->
-                            <form method="post" action="{% url 'update_cart_item' item.id %}" class="d-inline-block">
-                                {% csrf_token %}
-                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control d-inline-block w-auto" />
-                                <button type="submit" class="btn btn-primary btn-sm">Изменить</button>
-                            </form>
-                            <!-- Форма для удаления товара -->
-                            <form method="post" action="{% url 'remove_cart_item' item.id %}" class="d-inline-block">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
-                            </form>
+
+                            <!-- Блок с кнопками управления -->
+                            <div class="d-flex align-items-center">
+                                <!-- Форма для изменения количества товара -->
+                                <form method="post"
+                                      action="{% url 'update_cart_item' item.id %}"
+                                      class="me-2">
+                                    {% csrf_token %}
+                                    <input type="number"
+                                           name="quantity"
+                                           value="{{ item.quantity }}"
+                                           min="1"
+                                           class="form-control form-control-sm"
+                                           style="width: 70px; font-size: 14px;">
+                                    <button type="submit"
+                                            class="btn btn-primary btn-sm mt-1 w-100">
+                                        Изменить
+                                    </button>
+                                </form>
+
+                                <!-- Форма для удаления товара -->
+                                <form method="post"
+                                      action="{% url 'remove_cart_item' item.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-danger btn-sm">
+                                        Удалить
+                                    </button>
+                                </form>
+                            </div>
                         </li>
                     {% endfor %}
                 </ul>
@@ -52,7 +73,9 @@
                     <form method="post" action="{% url 'checkout' %}">
                         {% csrf_token %}
                         <input type="hidden" name="from_cart" value="true">
-                        <button type="submit" class="btn btn-success">Оформить заказ</button>
+                        <button type="submit" class="btn btn-success w-100">
+                            Оформить заказ
+                        </button>
                     </form>
                 {% else %}
                     <!-- Сообщение о нерабочем времени -->
@@ -60,7 +83,9 @@
                         Заказы принимаются только в рабочие дни (с понедельника по пятницу) с 9:00 до 18:00.
                     </div>
                     <!-- Кнопка "Оформить заказ" (заблокирована) -->
-                    <button class="btn btn-success" disabled>Оформить заказ</button>
+                    <button class="btn btn-success w-100" disabled>
+                        Оформить заказ
+                    </button>
                 {% endif %}
             {% else %}
                 <!-- Сообщение, если корзина пуста -->
