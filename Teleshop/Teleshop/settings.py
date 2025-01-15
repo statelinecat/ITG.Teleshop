@@ -118,9 +118,11 @@ USE_L10N = True  # Включаем локализацию
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'flower_shop/static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Папка для сбора статических файлов
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'flower_shop/static'),  # Ваша папка со статическими файлами
+]
 
 
 # Default primary key field type
