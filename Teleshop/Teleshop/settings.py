@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-nkin8cg@4yj$z_u&-kd_=aoev2ze3$wgw+=-5j9)gw6eh5ysm%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -119,7 +119,7 @@ USE_L10N = True  # Включаем локализацию
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Папка для сбора статических файлов
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')  # Папка для сбора статических файлов
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'flower_shop/static'),  # Ваша папка со статическими файлами
 ]
@@ -175,17 +175,19 @@ LOGGING = {
     },
 }
 
-ALLOWED_HOSTS = [
-    '213.171.31.160',
-    'localhost',  # Разрешить локальный доступ
-    '127.0.0.1',  # Разрешить доступ по IP
-]
+# ALLOWED_HOSTS = [
+#     '213.171.31.160',
+#     'localhost',  # Разрешить локальный доступ
+#     '127.0.0.1',  # Разрешить доступ по IP
+# ]
 
 #'1ad0-185-21-13-3.ngrok-free.app',   Разрешить доступ через ngrok
 
 # settings.py
 # BASE_URL = 'https://1ad0-185-21-13-3.ngrok-free.app'  # Для локального окружения (ngrok)
 # BASE_URL = 'https://ваш-домен.com'  # Для продакшн-окружения
-BASE_URL = 'http://213.171.31.160:8000'
+# BASE_URL = 'http://213.171.31.160:8000'
+
+BASE_URL = 'http://176.108.248.61'
 
 YAADMIN_SECRET_CODE = "123"
