@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <style>
         .cart-badge {
             color: red; /* Красный цвет текста */
@@ -42,6 +44,8 @@
                     {% if user.is_staff %}
                         <a class="nav-link" href="{% url 'order_report' %}">Отчеты</a>
                     {% endif %}
+                    <!-- Кнопка для привязки Telegram -->
+                    <button id="telegram-link-btn" class="nav-link btn btn-link">Телеграм</button>
                     <form action="{% url 'user_logout' %}" method="post" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="nav-link btn btn-link">Выход</button>
@@ -94,5 +98,23 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@1.16.1/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    // JavaScript для генерации кода и перехода в Telegram
+    document.getElementById('telegram-link-btn').addEventListener('click', function() {
+        fetch("{% url 'generate_link_code' %}")
+            .then(response => response.json())
+            .then(data => {
+                const code = data.code;
+                const telegramBotUrl = "https://t.me/lepestok_shop_bot"; // Замените на URL вашего бота
+                const telegramUrlWithCode = `${telegramBotUrl}?start=${code}`; // Добавляем код в параметр start
+                window.location.href = telegramUrlWithCode; // Переход в Telegram
+            })
+            .catch(error => {
+                console.error('Ошибка при генерации кода:', error);
+            });
+    });
+</script>
+
 </body>
 </html>

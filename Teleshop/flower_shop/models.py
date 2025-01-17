@@ -31,9 +31,16 @@ logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
-    """
-    Модель пользователя с дополнительными полями для телефона, адреса, Telegram ID и кода привязки.
-    """
+    username = models.CharField(
+        max_length=150,
+        unique=False,  # Убираем уникальность имени пользователя
+        verbose_name="Имя пользователя"
+    )
+    email = models.EmailField(unique=True, verbose_name="Email")  # Убедитесь, что email уникален
+
+    # Указываем, что email будет использоваться для аутентификации
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []  # username больше не требуется для создания пользователя
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="Телефон")
     address = models.TextField(blank=True, null=True, verbose_name="Адрес")
     telegram_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Telegram ID", db_index=True)

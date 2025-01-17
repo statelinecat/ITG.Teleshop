@@ -15,22 +15,12 @@
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        <!-- Имя пользователя -->
-                        <div class="form-group">
-                            <label for="id_username">Имя пользователя</label>
-                            <input type="text" name="username" id="id_username" class="form-control" required>
-                            {% if form.username.errors %}
-                                <div class="text-danger">
-                                    {{ form.username.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
                         <!-- Email -->
                         <div class="form-group">
                             <label for="id_email">Email</label>
-                            <input type="email" name="email" id="id_email" class="form-control" required>
+                            <input type="email" name="email" id="id_email" class="form-control" required placeholder="Введите ваш email">
                             {% if form.email.errors %}
-                                <div class="text-danger">
+                                <div class="text-danger small">
                                     {{ form.email.errors }}
                                 </div>
                             {% endif %}
@@ -38,9 +28,9 @@
                         <!-- Пароль -->
                         <div class="form-group">
                             <label for="id_password1">Пароль</label>
-                            <input type="password" name="password1" id="id_password1" class="form-control" required>
+                            <input type="password" name="password1" id="id_password1" class="form-control" required placeholder="Введите пароль">
                             {% if form.password1.errors %}
-                                <div class="text-danger">
+                                <div class="text-danger small">
                                     {{ form.password1.errors }}
                                 </div>
                             {% endif %}
@@ -48,27 +38,17 @@
                         <!-- Подтверждение пароля -->
                         <div class="form-group">
                             <label for="id_password2">Подтверждение пароля</label>
-                            <input type="password" name="password2" id="id_password2" class="form-control" required>
+                            <input type="password" name="password2" id="id_password2" class="form-control" required placeholder="Подтвердите пароль">
                             {% if form.password2.errors %}
-                                <div class="text-danger">
+                                <div class="text-danger small">
                                     {{ form.password2.errors }}
                                 </div>
                             {% endif %}
                         </div>
-                        <!-- Кнопка для генерации кода привязки -->
+                        <!-- Описание требований к паролю -->
                         <div class="form-group">
-                            <button type="button" id="generate-code-btn" class="btn btn-secondary btn-block">Получить код для привязки Telegram</button>
                             <small class="form-text text-muted">
-                                Если вы хотите получать уведомления о статусе заказов через Telegram, нажмите кнопку выше.
-                                Затем перейдите в нашего бота <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a> и введите полученный код.
-                            </small>
-                        </div>
-                        <!-- Поле для отображения кода -->
-                        <div class="form-group" id="code-display" style="display: none;">
-                            <label for="link-code">Ваш код для привязки:</label>
-                            <input type="text" id="link-code" class="form-control" readonly>
-                            <small class="form-text text-muted">
-                                Введите этот код в Telegram-боте <a href="https://t.me/lepestok_shop_bot" target="_blank">@lepestok_shop_bot</a> для привязки аккаунта.
+                                Пароль должен содержать как минимум 8 символов, включать хотя бы одну заглавную букву, одну строчную букву и одну цифру.
                             </small>
                         </div>
                         <!-- Кнопка регистрации -->
@@ -80,15 +60,4 @@
         </div>
     </div>
 </div>
-
-<script>
-    document.getElementById('generate-code-btn').addEventListener('click', function() {
-        fetch("{% url 'generate_link_code' %}")
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('link-code').value = data.code;
-                document.getElementById('code-display').style.display = 'block';
-            });
-    });
-</script>
 {% endblock %}

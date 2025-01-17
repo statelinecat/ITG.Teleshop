@@ -75,7 +75,7 @@ def checkout(request):
     last_order = Order.objects.filter(user=request.user).order_by('-created_at').first()
 
     # Значения по умолчанию
-    default_name = request.user.username
+    default_name = request.user.email  # По умолчанию используем email пользователя
     default_phone = "+79991237567"  # Пример номера телефона
     default_address = "Самовывоз"  # Пример адреса
     default_comment = "Я люблю Лепесток"  # Пример комментария
@@ -83,7 +83,7 @@ def checkout(request):
 
     # Если есть последний заказ, используем его данные
     if last_order:
-        default_name = last_order.name if last_order.name else default_name
+        default_name = last_order.name if last_order.name else request.user.email
         default_phone = last_order.phone if last_order.phone else default_phone
         default_address = last_order.address if last_order.address else default_address
         default_comment = last_order.comment if last_order.comment else default_comment
@@ -227,6 +227,9 @@ def order_list(request):
         'end_date': end_date.strftime('%Y-%m-%d') if end_date else '',
     })
 
+
+
+
 def register(request):
     """Регистрация нового пользователя."""
     if request.method == 'POST':
@@ -238,6 +241,7 @@ def register(request):
     else:
         form = CustomRegistrationForm()
     return render(request, 'flower_shop/register.html', {'form': form})
+
 
 class CustomLoginView(LoginView):
     """Кастомный вход в систему."""
@@ -268,12 +272,15 @@ def update_cart_item(request, item_id):
     """Обновление количества товара в корзине."""
     cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
     if request.method == 'POST':
-        quantity = int(request.POST.get('quantity', 1))
-        if quantity > 0:
-            cart_item.quantity = quantity
-            cart_item.save()
-        else:
-            cart_item.delete()
+        try:
+            quantity = int(request.POST.get('quantity', 1))
+            if quantity > 0:
+                cart_item.quantity = quantity
+                cart_item.save()
+            else:
+                cart_item.delete()
+        except (ValueError, TypeError):
+            messages.error(request, 'Некорректное количество товара.')
     return redirect('cart_detail')
 
 @login_required

@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.conf import settings
 import requests
 from telegrambot.db_controller import send_telegram_webhook  # Импортируем функцию для отправки вебхуков
+import asyncio  # Добавляем импорт asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -80,4 +81,4 @@ def notify_user_and_admins(sender, instance, **kwargs):
 
         # Отправляем уведомления через вебхуки
         for recipient in recipients:
-            send_telegram_webhook(recipient, message, item_images)
+            asyncio.run(send_telegram_webhook(recipient, message, item_images))  # Используем asyncio.run для вызова асинхронной функции

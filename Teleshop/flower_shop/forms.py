@@ -35,14 +35,27 @@ class CustomLoginForm(AuthenticationForm):
                 raise forms.ValidationError("Этот аккаунт неактивен.")
         return self.cleaned_data
 
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from .models import User
+from django.contrib.auth import authenticate
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from .models import User
+
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from .models import User
+import uuid  # Для генерации уникального username
+
+
 class CustomRegistrationForm(UserCreationForm):
     email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={'class': 'form-control'}))
 
     class Meta:
-        model = User  # Используйте кастомную модель User
-        fields = ['username', 'email', 'password1', 'password2']
+        model = User
+        fields = ['email', 'password1', 'password2']  # Убираем username
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
             'password1': forms.PasswordInput(attrs={'class': 'form-control'}),
             'password2': forms.PasswordInput(attrs={'class': 'form-control'}),
         }
@@ -53,14 +66,23 @@ class CustomRegistrationForm(UserCreationForm):
             raise forms.ValidationError("Пользователь с таким email уже существует.")
         return email
 
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+
+        # Генерируем уникальное значение для username
+        user.username = str(uuid.uuid4())  # Используем UUID для генерации уникального username
+
+        if commit:
+            user.save()
+        return user
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Кастомизация ошибок
-        self.fields['username'].error_messages = {
-            'unique': 'Пользователь с таким именем уже существует.',
-        }
+
+        # Убираем упоминания о username, так как его больше нет в форме
         self.fields['password1'].error_messages = {
-            'password_too_similar': 'Пароль слишком похож на имя пользователя или email.',
+            'password_too_similar': 'Пароль слишком похож на email.',
             'password_too_short': 'Пароль должен содержать не менее 8 символов.',
             'password_common': 'Пароль слишком простой.',
         }
