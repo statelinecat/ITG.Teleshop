@@ -52,14 +52,14 @@ django.setup()
 
 # Импортируем модели и функции
 from flower_shop.models import User
-from .db_controller import set_user_telegram_id, get_user_orders
+from Teleshop.telegrambot.db_controller import set_user_telegram_id, get_user_orders
 
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("debug.log"),  # Логи в файл
+        logging.FileHandler("../Teleshop/telegrambot/debug.log"),  # Логи в файл
         logging.StreamHandler()  # Логи в консоль
     ]
 )

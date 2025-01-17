@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}
     <title>Лепесток - Мои заказы</title>
@@ -8,13 +7,13 @@
 {% block content %}
 <div class="container mt-5">
     <!-- Заголовок "Мои заказы" по центру -->
-    <h1 class="mb-4 text-center">История заказов</h1>
+    <h1 class="mb-4 text-center">Мои заказы</h1>
 
     <!-- Надпись и кнопка "Телеграм" в одной строке -->
     <div class="d-flex justify-content-center align-items-center mb-4">
         <p class="mb-0 mr-3">Для отслеживания статуса заказов перейдите в телеграм</p>
-        <button id="telegram-link-btn-orders" class="btn btn-outline-primary">
-            <img src="{% static 'img/telegram_icon.png' %}" alt="Телеграм" style="width: 24px; height: 24px;">
+        <button id="telegram-link-btn-orders" class="btn btn-primary">
+            <img src="{% static 'img/telegram-icon.png' %}" alt="Телеграм" style="width: 24px; height: 24px;">
         </button>
     </div>
 

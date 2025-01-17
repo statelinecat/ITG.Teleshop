@@ -7,6 +7,8 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher.middlewares.base import BaseMiddleware
 from aiogram import Router
 from aiogram.filters import Command
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from asgiref.sync import sync_to_async
@@ -109,23 +111,58 @@ def get_report_period_keyboard():
         [InlineKeyboardButton(text="За все время", callback_data="report_period_all")]
     ])
 
-# Обработчики команд
+
+def get_code_input_keyboard():
+    """Возвращает инлайн-клавиатуру для ввода кодового слова."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="1", callback_data="code_1"),
+         InlineKeyboardButton(text="2", callback_data="code_2"),
+         InlineKeyboardButton(text="3", callback_data="code_3")],
+        [InlineKeyboardButton(text="4", callback_data="code_4"),
+         InlineKeyboardButton(text="5", callback_data="code_5"),
+         InlineKeyboardButton(text="6", callback_data="code_6")],
+        [InlineKeyboardButton(text="7", callback_data="code_7"),
+         InlineKeyboardButton(text="8", callback_data="code_8"),
+         InlineKeyboardButton(text="9", callback_data="code_9")],
+        [InlineKeyboardButton(text="0", callback_data="code_0"),
+         InlineKeyboardButton(text="Готово", callback_data="code_done")]
+    ])
+
+# Добавляем состояние для обработки ввода кодового слова
+class AdminState(StatesGroup):
+    waiting_for_code = State()
+
+# Инициализация хранилища состояний
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# Обработчик команды /yaadmin
 @router.message(Command("yaadmin"))
-async def handle_yaadmin(message: types.Message):
-    """Обработчик команды /yaadmin. Делает пользователя администратором."""
+async def handle_yaadmin(message: types.Message, state: FSMContext):
+    """Обработчик команды /yaadmin. Запрашивает кодовое слово через инлайн-клавиатуру."""
+    await message.answer("Введите кодовое слово, используя кнопки ниже:", reply_markup=get_code_input_keyboard())
+    await state.set_state(AdminState.waiting_for_code)
+    await state.update_data(code_input="")  # Инициализируем пустую строку для ввода кода
+
+# Обработчик для проверки кодового слова
+@router.message(AdminState.waiting_for_code)
+async def check_admin_code(message: types.Message, state: FSMContext):
+    """Обработчик для проверки кодового слова."""
     try:
         user = await sync_to_async(User.objects.get)(telegram_id=message.chat.id)
-        if message.text.strip() == f"/yaadmin {settings.YAADMIN_SECRET_CODE}":
+        if message.text.strip() == settings.YAADMIN_SECRET_CODE:
             user.is_staff = True
             await sync_to_async(user.save)()
             await message.answer("Поздравляем! Теперь вы администратор.", reply_markup=get_main_keyboard(is_staff=True))
         else:
-            await message.answer("Неверный код. Попробуйте еще раз.")
+            await message.answer("Неверное кодовое слово. Попробуйте еще раз.")
+        await state.clear()  # Очищаем состояние после проверки
     except ObjectDoesNotExist:
         await message.answer("Ваш аккаунт не привязан. Введите код для привязки.")
     except Exception as e:
         logger.error(f"Ошибка при выполнении команды /yaadmin: {e}")
         await message.answer("Произошла ошибка. Пожалуйста, попробуйте позже.")
+        await state.clear()  # Очищаем состояние в случае ошибки
 
 @router.message(Command("yaneadmin"))
 async def handle_yaneadmin(message: types.Message):
@@ -164,7 +201,16 @@ async def handle_start(message: types.Message):
             reply_markup=get_main_keyboard(is_staff=user.is_staff)
         )
     except ObjectDoesNotExist:
-        await message.reply("Ваш аккаунт не привязан. Введите код для привязки.")
+        # Создаем клавиатуру с кнопкой "Перейти на сайт"
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Перейти на сайт", url=f"{settings.BASE_URL}")]
+        ])
+
+        # Отправляем сообщение с кнопкой
+        await message.reply(
+            "Ваш аккаунт не привязан. Для авторизации перейдите на сайт магазина.",
+            reply_markup=keyboard
+        )
 
 @router.message(lambda message: message.text == "Статус заказов")
 async def handle_status(message: types.Message):
@@ -463,6 +509,38 @@ async def handle_code(message: types.Message):
     except Exception as e:
         logger.error(f"Ошибка при привязке аккаунта: {e}")
         await message.reply("Произошла ошибка. Пожалуйста, попробуйте позже.")
+
+
+@router.callback_query(lambda callback: callback.data.startswith("code_"))
+async def handle_code_input(callback: types.CallbackQuery, state: FSMContext):
+    """Обработчик ввода кодового слова через инлайн-клавиатуру."""
+    data = await state.get_data()
+    code_input = data.get("code_input", "")
+
+    if callback.data == "code_done":
+        # Проверяем введенное кодовое слово
+        if code_input == settings.YAADMIN_SECRET_CODE:
+            user = await sync_to_async(User.objects.get)(telegram_id=callback.message.chat.id)
+            user.is_staff = True
+            await sync_to_async(user.save)()
+            await callback.message.answer("Поздравляем! Теперь вы администратор.", reply_markup=get_main_keyboard(is_staff=True))
+        else:
+            await callback.message.answer("Неверное кодовое слово. Попробуйте еще раз.")
+        await state.clear()
+    else:
+        # Добавляем символ к введенному коду
+        code_input += callback.data.replace("code_", "")
+        await state.update_data(code_input=code_input)
+        await callback.answer(f"Введено: {code_input}")
+
+
+@router.message(AdminState.waiting_for_code)
+async def handle_code_input_cancel(message: types.Message, state: FSMContext):
+    """Обработчик отмены ввода кодового слова."""
+    await message.answer("Ввод кодового слова отменен.")
+    await state.clear()
+
+
 
 # Подключаем роутер к диспетчеру
 dp.include_router(router)
