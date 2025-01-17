@@ -140,7 +140,7 @@ dp = Dispatcher(storage=storage)
 @router.message(Command("yaadmin"))
 async def handle_yaadmin(message: types.Message, state: FSMContext):
     """Обработчик команды /yaadmin. Запрашивает кодовое слово через инлайн-клавиатуру."""
-    await message.answer("Введите кодовое слово, используя кнопки ниже:", reply_markup=get_code_input_keyboard())
+    await message.answer("Введите пинкод, используя кнопки ниже:", reply_markup=get_code_input_keyboard())
     await state.set_state(AdminState.waiting_for_code)
     await state.update_data(code_input="")  # Инициализируем пустую строку для ввода кода
 
@@ -155,7 +155,7 @@ async def check_admin_code(message: types.Message, state: FSMContext):
             await sync_to_async(user.save)()
             await message.answer("Поздравляем! Теперь вы администратор.", reply_markup=get_main_keyboard(is_staff=True))
         else:
-            await message.answer("Неверное кодовое слово. Попробуйте еще раз.")
+            await message.answer("Неверное пинкод. Попробуйте еще раз.")
         await state.clear()  # Очищаем состояние после проверки
     except ObjectDoesNotExist:
         await message.answer("Ваш аккаунт не привязан. Введите код для привязки.")
@@ -525,7 +525,7 @@ async def handle_code_input(callback: types.CallbackQuery, state: FSMContext):
             await sync_to_async(user.save)()
             await callback.message.answer("Поздравляем! Теперь вы администратор.", reply_markup=get_main_keyboard(is_staff=True))
         else:
-            await callback.message.answer("Неверное кодовое слово. Попробуйте еще раз.")
+            await callback.message.answer("Неверный пинкод. Попробуйте еще раз.")
         await state.clear()
     else:
         # Добавляем символ к введенному коду
