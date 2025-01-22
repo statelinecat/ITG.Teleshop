@@ -368,9 +368,18 @@ def order_report(request):
         end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
 
     orders = Order.objects.filter(created_at__date__range=(start_date, end_date))
+
+    # Убираем перенаправление на order_list
     if not orders.exists():
         messages.warning(request, 'Нет заказов за выбранный период.')
-        return redirect('order_list')
+        # Вместо перенаправления, просто передаем пустые данные в шаблон
+        return render(request, 'flower_shop/order_report.html', {
+            'start_date': start_date,
+            'end_date': end_date,
+            'total_orders': 0,
+            'total_revenue': 0,
+            'daily_stats': [],
+        })
 
     daily_stats = (
         orders
@@ -384,14 +393,6 @@ def order_report(request):
 
     total_orders = orders.count()
     total_revenue = orders.aggregate(total_revenue=Sum('items__product__price'))['total_revenue'] or 0
-
-    report = Report.objects.create(
-        date=timezone.now().date(),
-        total_orders=total_orders,
-        total_revenue=total_revenue,
-        period_start=start_date,
-        period_end=end_date
-    )
 
     return render(request, 'flower_shop/order_report.html', {
         'start_date': start_date,
